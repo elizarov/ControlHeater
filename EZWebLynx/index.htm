@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8 " />
+<title>Управление Котлом / Дача</title>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.3/jquery.min.js" type="text/javascript"></script>
+<script type="text/javascript">
+  function ilast(s, t, i) {
+    j = s.indexOf(t, i);
+    return j < 0 ? s.length : j;
+  }
+
+  function part(s, tag) {
+    i = s.indexOf(tag.charAt(0));
+    if (i < 0 && tag.length() > 1)
+      i = s.indexOf(tag.charAt(1));
+    if (i < 0)
+      return "";
+    i++;
+    while (i < s.length && s.charAt(i) == " ")
+      i++;
+    return s.substring(i, Math.min(ilast(s, " ", i), ilast(s, "]", i)));
+  }
+
+  function trimLz(s) {
+    i = 0;
+    while (i < s.length - 1 && s.charAt(i) == "0" && s.charAt(i + 1) >= "0" && s.charAt(i + 1) <= "9")
+      i++;
+    return s.substr(i);
+  }
+
+  function update(s) {
+    if (s != null && s.substr(0, 3) == "[C:") {
+      $("#stat").text(s);
+      state = part(s, "s");
+      if (state != "") {
+        for (i = 1; i <= 6; i++) {
+          c = state.charAt(i - 1);
+          elem = $("#s" + i + " .led");
+          elem.text(c); 
+          elem.removeClass("off grn red");
+          elem.addClass(c == "1" ? i == 5 ? "red" : "grn" : "off");
+        }
+      }
+      $("#t").html(part(s, "]") + "&deg;C");
+      $("#t2").text("in:" + part(s, "+-") + " set:" + part(s, "p")); 
+      $("#s6 .wp").text(trimLz(part(s, "w")));
+    }
+    $("#cmd").text("");
+    setTimeout("reload()", 1000);
+  }
+
+  function reload() {
+    $("#cmd").text("Updating ...");
+    $.get("status.htm", update);
+  }
+
+  function cmdDone() {
+    $("button").fadeTo(400, 1);
+  }
+
+  function command() {
+    node = $(this);
+    node.fadeTo(400, 0.3);
+    cmd = this.parentNode.id;
+    $("#cmd").text("Sending " + cmd + " ...");
+    $.get(cmd + ".htm", cmdDone);
+  }
+
+  function init() {
+    update("<!--(READ SERIAL_GET)--> <!--(READ TEMPC1)-->");
+    $("button").click(command);
+  }
+
+  $(document).ready(init);
+</script>
+<style type="text/css">
+  h1, div, p, button { font-family: Tahoma, Geneva, sans-serif; }
+  body   { width: 600px; margin: 9px; padding: 10px; border: 1px solid black; font-size: 100%; 
+           -moz-border-radius: 15px;
+           -webkit-border-radius: 15px;
+           border-radius: 15px; }
+  h1     { margin: 0px; padding: 0px;  font-size: 2em; font-weight: normal; text-decoration: underline; text-align: center; }
+  p      { margin: 0px; padding: 0px; font-size: 1em; text-align: center; }
+  .dig   { font-family: "Lucida Console", Monaco, monospace }
+  .blk   { padding: 5px; border: 1px dashed grey; width: 100px; height: 60px; 
+           -moz-border-radius: 10px;
+           -webkit-border-radius: 10px;
+           border-radius: 10px; }
+  #st    { margin: 10px auto 10px auto; width: 345px; height: 142px; }
+  #t     { font-size: 4em; text-align: center; margin-top: 40px; }
+  #t2    { float: right; font-size: .6em; }
+  .led   { margin: 3px auto 3px auto; border: 3px solid; padding-top: 5px; width: 30px; height: 25px; 
+           -moz-border-radius: 18px;
+           -webkit-border-radius: 18px;
+           border-radius: 18px; }
+  .off   { color: grey; border-color: grey; }
+  .grn   { color: #236223; border-color: #369536; background-color: #53E953; }
+  .red   { color: #62232E; border-color: #943545; background-color: #E9546D; }
+  .lbl   { font-size: 1.2em; }
+  .rs    { width: 112px; float: right; }
+  .rs .blk { margin: 10px 0px 0px 0px; }
+  .bs    { margin: 10px auto 10px auto; width: 488px; }
+  .bs .blk { margin: 0px 5px 10px 5px; float: left; height: 95px; }
+  .wp    { float: right; font-size: .6em; }
+  button { margin: 5px 10px 5px 10px; padding: 0px; font-size: 1em; width: 80px;
+           background-color: #E2EBBE; border:1px solid #8E927A; 
+           -moz-border-radius: 8px;
+           -webkit-border-radius: 8px;
+           border-radius: 8px; }
+  .ss    { clear: both; text-align: left; font-size: .5em; }
+  .acts  { text-align: left; font-size: .8em; }
+</style>
+</head>
+<body>
+<h1>Управление Котлом</h1>
+<div class="rs">
+  <div id="s6" class="blk">
+    <div class="wp dig">???%</div>
+    <p class="led">?</p>
+    <p class="lbl">Работа</p>
+  </div>
+  <div id="s5" class="blk">
+    <p class="led">?</p>
+    <p class="lbl">Ошибка</p>
+  </div>
+</div>
+<div id="st" class="blk">
+  <div id="t2" class="dig">??</div>
+  <p id="t" class="dig">??</p>
+</div>
+<div class="bs">
+  <div id="s1" class="blk">
+    <p class="led">?</p>
+    <p class="lbl">Включено</p>
+    <button type="button">Выбор</button>
+  </div>
+  <div id="s2" class="blk">
+    <p class="led">?</p>
+    <p class="lbl">Таймер</p>
+    <button type="button">Выбор</button>
+  </div>
+  <div id="s3" class="blk">
+    <p class="led">?</p>
+    <p class="lbl">Выключено</p>
+    <button type="button">Выбор</button>
+  </div>
+  <div id="s4" class="blk">
+    <p class="led">?</p>
+    <p class="lbl">Гор. вода</p>
+    <button type="button">Выбор</button>
+  </div>
+</div>
+<p class="ss dig"><span id="stat"></span>&nbsp;<span id="cmd"></span></p>
+<p class="acts"><a href="reset.htm">Перезапустить</a> <a href="email.htm">Послать письмо</a></p>
+</body>
+</html>
