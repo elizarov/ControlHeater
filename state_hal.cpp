@@ -11,12 +11,16 @@ volatile int readCounter;
 
 //------- READ STATE ------
 
-byte statePins[STATE_SIZE] = { 3, 7, 6, 5, 4, 8, A3 };
+const byte statePins[STATE_SIZE] = { 3, 7, 6, 5, 4, 8, A3 };
+const byte stateXor[STATE_SIZE]  = { 1, 1, 1, 1, 1, 1, 0  }; // first 6 states are negative
 
 void readState() {
   byte newState = 0;
-  for (byte i = 0; i < STATE_SIZE; i++)
-    bitWrite(newState, i, !digitalRead(statePins[i]));
+  for (byte i = 0; i < STATE_SIZE; i++) {
+    byte r = digitalRead(statePins[i]);
+    byte x = stateXor[i];
+    bitWrite(newState, i, r ^ x);
+  }
   if (curState != newState) {
     byte newMode = curMode;
     for (int i = 0; i < MAX_MODE; i++)
@@ -72,7 +76,5 @@ long getModeTime(byte mode) {
 }
 
 boolean isActive() {
-  return curState & (1 << STATE_ACTIVE) != 0;
+  return (curState & (1 << STATE_ACTIVE)) != 0;
 }
-
-
