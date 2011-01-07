@@ -225,8 +225,8 @@ void dumpState() {
 #define WRITE_BUF_START    3
 #define WRITE_BUF_MAX_ITEM 6
 
-#define INITIAL_WRITE_INTERVAL   2000 // 2 sec
-#define PERIODIC_WRITE_INTERVAL 60000 // 1 min
+#define INITIAL_WRITE_INTERVAL   2000L // 2 sec
+#define PERIODIC_WRITE_INTERVAL 60000L // 1 min
 
 Metro writeInterval(INITIAL_WRITE_INTERVAL);
 char writeBuf[WRITE_BUF_SIZE] = "!C=";
@@ -267,6 +267,20 @@ void writeValues() {
     flushWriteBuffer();
     writeInterval.interval(PERIODIC_WRITE_INTERVAL);
     writeInterval.reset();
+  }
+}
+
+//------- CHECK ERROR --------
+
+#define ERROR_TIMEOUT (60 * 60000L) // 1 hour
+
+Metro errorTimeout(100);
+
+void checkError() {
+  if (getErrorBits() != 0 && errorTimeout.check()) {
+    println("{C:ERROR}*");
+    errorTimeout.interval(ERROR_TIMEOUT);
+    errorTimeout.reset();
   }
 }
 
