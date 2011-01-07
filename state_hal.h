@@ -36,6 +36,9 @@ byte getMode();
 // Returns time of the last change to the specified mode
 long getModeTime(byte mode);
 
+byte getErrorBits();
+byte getActiveBits();
+
 boolean isActive();
 
 #endif

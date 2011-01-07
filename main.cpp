@@ -7,6 +7,7 @@
 #include "state_hal.h"
 #include "command_hal.h"
 #include "preset_hal.h"
+#include "util.h"
 
 //------- READ TEMPERATURE------
 
@@ -104,25 +105,25 @@ void saveHistory() {
 
 boolean firstDump = true; 
 Metro dump(5000);
-char dumpLine[] = "[C:0 s0000000+??.? d+0.00 p00.0 q0.0 w00 i0000-00.0 a0000+00.0 u00000000]*";
+char dumpLine[] = "[C:0 s0000000+??.? d+0.00 p00.0 q0.0 w00 i0000-00.0 a000+00.0 u00000000]*";
 
-int indexOf(int start, char c) {
-  for (int i = start; dumpLine[i] != 0; i++)
+byte indexOf(byte start, char c) {
+  for (byte i = start; dumpLine[i] != 0; i++)
     if (dumpLine[i] == c)
       return i;
   return 0;
 }
 
 #define POSITIONS0(P0,C2,POS,SIZE)                 \
-        int POS = P0;                              \
-	int SIZE = indexOf(POS, C2) - POS;
+        byte POS = P0;                             \
+      	byte SIZE = indexOf(POS, C2) - POS;
 
 #define POSITIONS(C1,C2,POS,SIZE)                  \
         POSITIONS0(indexOf(0, C1) + 1,C2,POS,SIZE)
 
-int modePos = indexOf(0, ':') + 1;
-int statePos = indexOf(0, 's') + 1;
-int highlightPos = indexOf(0, '*');
+byte modePos = indexOf(0, ':') + 1;
+byte statePos = indexOf(0, 's') + 1;
+byte highlightPos = indexOf(0, '*');
 
 POSITIONS0(indexOf(0, '+'), ' ', tempPos, tempSize)
 POSITIONS('d', ' ', deltaPos, deltaSize)
@@ -140,38 +141,20 @@ POSITIONS('u', ']', uptimePos, uptimeSize)
 long daystart = 0;
 int updays = 0;
 
-void prepareDecimal(int x, int pos, int size, 
-byte prec = 0, boolean sign = false) 
-{
-  char sc = '+';
-  if (x < 0) {
-    x = -x;
-    sc = '-';
-  } 
-  else if (x == 0) {
-    sc = dumpLine[pos]; // retain previous sign char
-  }
-  for (int i = 0; i < size; i++) {
-    int index = pos + size - 1 - i;
-    if (prec != 0 && i == prec) {
-      dumpLine[index] = '.';
-    } 
-    else if (sign && i == size - 1) {
-      dumpLine[index] = sc;
-    } 
-    else {
-      dumpLine[index] = '0' + x % 10;
-      x /= 10;
-    }
-  }
+inline void prepareDecimal(int x, int pos, byte size, byte fmt = 0) {
+  formatDecimal(x, &dumpLine[pos], size, fmt);
 }
 
-void prepareTemp1(int x, int pos, int size) {
-  prepareDecimal((x + (x > 0 ? 5 : -5)) / 10, pos, size, 1, true);
+int roundTemp1(int x) {
+  return (x + (x > 0 ? 5 : -5)) / 10;
 }
 
-void prepareTemp2(int x, int pos, int size) {
-  prepareDecimal(x, pos, size, 2, true);
+inline void prepareTemp1(int x, int pos, int size) {
+  prepareDecimal(roundTemp1(x), pos, size, 1 | FMT_SIGN);
+}
+
+inline void prepareTemp2(int x, int pos, int size) {
+  prepareDecimal(x, pos, size, 2 | FMT_SIGN);
 }
 
 void makeDump(boolean highlight) {
@@ -234,6 +217,57 @@ void makeDump(boolean highlight) {
 void dumpState() {
   if (dump.check())
     makeDump(firstDump);
+}
+
+//------- WRITE VALUES -------
+
+#define WRITE_BUF_SIZE     60
+#define WRITE_BUF_START    3
+#define WRITE_BUF_MAX_ITEM 6
+
+#define INITIAL_WRITE_INTERVAL   2000 // 2 sec
+#define PERIODIC_WRITE_INTERVAL 60000 // 1 min
+
+Metro writeInterval(INITIAL_WRITE_INTERVAL);
+char writeBuf[WRITE_BUF_SIZE] = "!C=";
+byte writeBufPos = WRITE_BUF_START;
+
+void flushWriteBuffer() {
+  if (writeBufPos == WRITE_BUF_START)
+    return;
+  writeBuf[writeBufPos] = 0;
+  println(&writeBuf[0]);
+  writeBufPos = WRITE_BUF_START;
+}
+
+void appendToBuffer(char tag, int value, byte fmt = 0) {
+  if (writeBufPos + 1 + WRITE_BUF_MAX_ITEM >= WRITE_BUF_SIZE)
+    flushWriteBuffer();
+  writeBuf[writeBufPos++] = tag;
+  byte size = formatDecimal(value, &writeBuf[writeBufPos], WRITE_BUF_MAX_ITEM, fmt | FMT_LEFT | FMT_SPACE);
+  writeBufPos += size;
+}
+
+void writeToBuffer() {
+  int temp = ds.value();
+  if (temp != DS18B20_NONE)
+    appendToBuffer('a', roundTemp1(temp), 1 | FMT_SIGN);
+  appendToBuffer('b', hDeltaTemp, 2 | FMT_SIGN);
+  appendToBuffer('c', hWorkMinutes);
+  appendToBuffer('d', getMode());
+  appendToBuffer('e', getErrorBits());
+  appendToBuffer('f', getActiveBits());
+  appendToBuffer('g', getPresetTemp(), 1);
+  appendToBuffer('h', getPresetTime(), 1);
+}
+
+void writeValues() {
+  if (writeInterval.check()) {
+    writeToBuffer();
+    flushWriteBuffer();
+    writeInterval.interval(PERIODIC_WRITE_INTERVAL);
+    writeInterval.reset();
+  }
 }
 
 //------- SAVE MODE --------
@@ -361,6 +395,7 @@ void loop() {
   if (checkState())
     makeDump(true);
   dumpState();
+  writeValues();
   updateMode();
   saveHistory();
   parseCommand();

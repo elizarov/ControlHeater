@@ -75,6 +75,14 @@ long getModeTime(byte mode) {
   return modeTime[mode];  
 }
 
+byte getErrorBits() {
+  return (curState >> STATE_ERROR) & 1;
+}
+
+byte getActiveBits() {
+  return (curState >> STATE_ACTIVE) & 3;
+}
+
 boolean isActive() {
   return (curState & (1 << STATE_ACTIVE)) != 0;
 }
