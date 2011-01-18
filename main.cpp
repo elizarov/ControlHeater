@@ -103,9 +103,11 @@ void saveHistory() {
 
 //------- DUMP STATE -------
 
+#define HIGHLIGHT_CHAR '*'
+
 boolean firstDump = true; 
 Metro dump(5000);
-char dumpLine[] = "[C:0 s0000000+??.? d+0.00 p00.0 q0.0 w00 i0000-00.0 a000+00.0 u00000000]*";
+char dumpLine[] = "[C:0 s0000000+??.? d+0.00 p00.0 q0.0 w00 i0000-00.0 a000+00.0 u00000000]* ";
 
 byte indexOf(byte start, char c) {
   for (byte i = start; dumpLine[i] != 0; i++)
@@ -123,7 +125,7 @@ byte indexOf(byte start, char c) {
 
 byte modePos = indexOf(0, ':') + 1;
 byte statePos = indexOf(0, 's') + 1;
-byte highlightPos = indexOf(0, '*');
+byte highlightPos = indexOf(0, HIGHLIGHT_CHAR);
 
 POSITIONS0(indexOf(0, '+'), ' ', tempPos, tempSize)
 POSITIONS('d', ' ', deltaPos, deltaSize)
@@ -157,7 +159,16 @@ inline void prepareTemp2(int x, int pos, int size) {
   prepareDecimal(x, pos, size, 2 | FMT_SIGN);
 }
 
-void makeDump(boolean highlight) {
+#define DUMP_REGULAR               0
+#define DUMP_FIRST                 HIGHLIGHT_CHAR
+#define DUMP_EXTERNAL_MODE_CHANGE  'e'
+#define DUMP_INTERNAL_MODE_CHANGE  'i'
+#define DUMP_RESTORE_OFF_MODE      'r'
+#define DUMP_HOTWATER_TIMEOUT      'h'
+#define DUMP_CMD_RESPONSE          '?'
+#define DUMP_CMD_MODE_CHANGE       'c'
+
+void makeDump(char dumpType) {
   // atomically read everything
   noInterrupts();
   byte mode = getMode();
@@ -202,12 +213,14 @@ void makeDump(boolean highlight) {
   prepareDecimal((int) time, uptimePos + uptimeSize - 6, 2);
 
   // print
-  if (highlight) {
-    dumpLine[highlightPos] = '*';
-    dumpLine[highlightPos + 1] = 0;
-  } 
-  else {
+  if (dumpType == DUMP_REGULAR) {
     dumpLine[highlightPos] = 0;
+  } else {
+    byte i = highlightPos;
+    dumpLine[i++] = dumpType;
+    if (dumpType != HIGHLIGHT_CHAR)
+      dumpLine[i++] = HIGHLIGHT_CHAR; // must end with highlight (signal) char
+    dumpLine[i++] = 0; // and the very last char must be zero
   }
   println(dumpLine);
   dump.reset();
@@ -216,7 +229,7 @@ void makeDump(boolean highlight) {
 
 void dumpState() {
   if (dump.check())
-    makeDump(firstDump);
+    makeDump(firstDump ? DUMP_FIRST : DUMP_REGULAR);
 }
 
 //------- WRITE VALUES -------
@@ -299,7 +312,6 @@ void saveMode() {
   if (mode != savedMode && mode != 0) {
     savedMode = mode;
     EEPROM.write(EEPROM_MODE, mode);
-    makeDump(true);
   }
 }
 
@@ -316,7 +328,7 @@ char parseCmd;
 void executeCommand(char cmd) {
   switch (cmd) {
   case '?':
-    makeDump(true);
+    makeDump(DUMP_CMD_RESPONSE);
     break;
   case '1':
   case '2':
@@ -324,6 +336,7 @@ void executeCommand(char cmd) {
   case '4':
     changeMode(cmd - '0');
     saveMode();
+    makeDump(DUMP_CMD_MODE_CHANGE);
     break;
   }
 }
@@ -366,15 +379,22 @@ void updateMode() {
   byte mode = getMode(); // read current mode atomically
   if (mode != 0 && mode != savedMode) {
     // forbit direct transition from OFF to WORKING
-    if (savedMode == MODE_OFF && mode == MODE_WORKING)
+    if (savedMode == MODE_OFF && mode == MODE_WORKING) {
       changeMode(savedMode);
-    saveMode(); // allow all other transitions
+      saveMode();
+      makeDump(DUMP_RESTORE_OFF_MODE);
+    } else {
+      // allow all other transitions
+      saveMode();
+      makeDump(DUMP_EXTERNAL_MODE_CHANGE);
+    }
   }
   mode = getMode(); // atomic reread
   if (mode == MODE_HOTWATER && millis() - getModeTime(MODE_HOTWATER) > HOTWATER_TIMEOUT) {
     // HOTWATER mode for too long... switch to WORKING
     changeMode(MODE_WORKING);
     saveMode();
+    makeDump(DUMP_HOTWATER_TIMEOUT);
   }
 }  
 
@@ -407,11 +427,11 @@ void loop() {
   ds.read();
   checkInactive();
   if (checkState())
-    makeDump(true);
-  dumpState();
-  writeValues();
+    makeDump(DUMP_INTERNAL_MODE_CHANGE);
   updateMode();
   saveHistory();
+  dumpState();
+  writeValues();
   parseCommand();
   blinkLed();
 }
