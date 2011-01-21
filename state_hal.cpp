@@ -4,47 +4,61 @@
 
 #define STATE_INTERRUPT 0
 
-#define INVERSE_STATES 6
-#define ERROR_TIMEOUT 2000 // 2 sec
+#define SCAN_STATES  6
 
-volatile byte curState; // current STATE_XXX bits
+#define TURN_ON_PIN        A3
+#define TURN_ON_THRESHOLD  100
+#define UNKNOWN            0xff
+
+#define ERROR_TIMEOUT   2000L // 2 sec
+
+volatile byte scanState; // current STATE_XXX bits from scanState
 volatile byte curMode;  // current MODE_XXX
 volatile long modeTime[MAX_MODE + 1]; // last time mode was active
 volatile int readCounter; // number of times interrupt pin was triggered
-volatile long lastErrorTime = -2 * ERROR_TIMEOUT; // last time error state was seen
+volatile byte errorCnt; // # of times error seen in ERROR_TIMEOUT = 0, 1, or 2+
+volatile long lastErrorTime; // last time error state was seen
+volatile byte turnedOnCache; // cached value of turned on state or UNKNOWN
+
+boolean forcedOn; // last setForceOn value
 
 //------- READ STATE ------
 
-const byte statePins[STATE_SIZE] = { 3, 7, 6, 5, 4, 8, A3 };
+const byte statePins[SCAN_STATES] = { 3, 7, 6, 5, 4, 8 };
 
-void readState() {
+void scanStateInterruptHandler() {
   byte newState = 0;
-  for (byte i = 0; i < STATE_SIZE; i++) {
-    byte v = digitalRead(statePins[i]);
-    if (i < INVERSE_STATES)
-      v = !v;
-    bitWrite(newState, i, v);
-  }
-  if (curState != newState) {
-    if (curState & (1 << STATE_ERROR))
-      lastErrorTime = millis();
+  for (byte i = 0; i < SCAN_STATES; i++)
+    bitWrite(newState, i, !digitalRead(statePins[i]));
+  if (scanState != newState) {
+    scanState = newState;
+    long time = millis();
+    if (newState & (1 << STATE_ERROR)) {
+      if (time - lastErrorTime < ERROR_TIMEOUT)
+        errorCnt = 2;
+      else
+        errorCnt = 1;
+      lastErrorTime = time;
+    } else
+      errorCnt = 0;
     byte newMode = curMode;
     for (int i = 0; i < MAX_MODE; i++)
       if ((newState & MODE_MASK) == (1 << i)) {
         newMode = i + 1;
         break;
       }
-    curState = newState;
     if (curMode != newMode) {
-      modeTime[newMode] = millis();
+      modeTime[newMode] = time;
       curMode = newMode;
     }
   }
   readCounter++;
+  turnedOnCache = UNKNOWN;
 }
 
 void setupState() {
-  attachInterrupt(STATE_INTERRUPT, readState, FALLING);
+  lastErrorTime = millis() - 2 * ERROR_TIMEOUT; // do not report error initially
+  attachInterrupt(STATE_INTERRUPT, scanStateInterruptHandler, FALLING);
 }
 
 //------- CHECK READ COUNTER -------
@@ -60,6 +74,8 @@ boolean checkState() {
     if (readCounter == 0 && curMode != 0) { 
       modeTime[0] = time;
       curMode = 0;
+      errorCnt = 2; // indicates a error condition for getErrorBits
+      turnedOnCache = UNKNOWN;
       updated = true;
     } else
       readCounter = 0;
@@ -73,16 +89,30 @@ boolean checkState() {
   return updated;
 }
 
+//------- CACHING READ FOR TURNED ON PIN -------
+
+// analog read turned on pin, but no too often
+boolean isTurnedOnCached() {
+  boolean on;
+  byte cache = turnedOnCache; // atomic read
+  if (cache == UNKNOWN) {
+    on = analogRead(TURN_ON_PIN) > TURN_ON_THRESHOLD;
+    turnedOnCache = on ? 1 : 0;
+  } else
+    on = cache > 0;
+  return on;
+}
+
 //------- ACCESSORS -------
 
 byte getState() {
-  noInterrupts();
-  byte state = curState;
-  long errorTime = lastErrorTime;
-  interrupts();
-  // error state is "blinking". We correct this blinking here
-  if (millis() - errorTime < ERROR_TIMEOUT)
-    state |= 1 << STATE_ERROR;
+  byte state = scanState; // atomic read
+  // We rebuild error state here based on internal logic
+  state &= ~(1 << STATE_ERROR);
+  state |= getErrorBits() << STATE_ERROR;
+  // add turned on state
+  if (forcedOn || isTurnedOnCached())
+    state |= 1 << STATE_TURNED_ON;
   return state;
 }
 
@@ -94,14 +124,26 @@ long getModeTime(byte mode) {
   return modeTime[mode];  
 }
 
+// internal check -- report error when blinked error light twice in ERROR_TIMEOUT
 byte getErrorBits() {
-  return (getState() >> STATE_ERROR) & 1;
+  return errorCnt > 1 ? 1 : 0;
 }
 
 byte getActiveBits() {
-  return (curState >> STATE_ACTIVE) & 3;
+  return (getState() >> STATE_ACTIVE) & 3;
 }
 
-boolean isActive() {
-  return (curState & (1 << STATE_ACTIVE)) != 0;
+//------- FORCED_TURN_ON -------
+
+void setForceOn(boolean on) {
+  if (on == forcedOn)
+    return;
+  forcedOn = on;
+  if (on) {
+    pinMode(TURN_ON_PIN, OUTPUT);
+    digitalWrite(TURN_ON_PIN, 1);
+  } else {
+    pinMode(TURN_ON_PIN, INPUT);
+    digitalWrite(TURN_ON_PIN, 0); // no pullup
+  }
 }

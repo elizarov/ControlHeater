@@ -27,7 +27,7 @@
 void setupState();
 boolean checkState();
 
-// Returns a combintion of STATE_xxx bits
+// Returns a combination of STATE_xxx bits
 byte getState();
 
 // Returns one of MODE_xxx constants
@@ -39,6 +39,7 @@ long getModeTime(byte mode);
 byte getErrorBits();
 byte getActiveBits();
 
-boolean isActive();
+// force heater on
+void setForceOn(boolean on);
 
 #endif

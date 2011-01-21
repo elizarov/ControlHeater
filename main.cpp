@@ -1,5 +1,4 @@
 #include <OneWire.h>
-#include <EEPROM.h>
 #include <Metro.h>
 
 #include "print.h"
@@ -7,6 +6,9 @@
 #include "state_hal.h"
 #include "command_hal.h"
 #include "preset_hal.h"
+#include "persist.h"
+#include "parse.h"
+#include "dump_config.h"
 #include "util.h"
 
 //------- READ TEMPERATURE------
@@ -30,7 +32,7 @@ boolean wasActive;
 
 void checkInactive() {
   long time = millis();
-  boolean active = isActive();
+  boolean active = getActiveBits() != 0;
   int temp = ds.value();
   if (temp == DS18B20_NONE)
     return;
@@ -78,7 +80,7 @@ void saveHistory() {
   // note: only save history with valid temperature measurements
   int temp = ds.value();
   if (temp != DS18B20_NONE && hPeriod.check()) {
-    byte work = isActive() ? 1 : 0;
+    byte work = getActiveBits() != 0 ? 1 : 0;
     hSumWork += work;
     hSize++;
     // enqueue to tail
@@ -161,12 +163,14 @@ inline void prepareTemp2(int x, int pos, int size) {
 
 #define DUMP_REGULAR               0
 #define DUMP_FIRST                 HIGHLIGHT_CHAR
-#define DUMP_EXTERNAL_MODE_CHANGE  'e'
+#define DUMP_EXTERNAL_MODE_CHANGE  'b'
 #define DUMP_INTERNAL_MODE_CHANGE  'i'
 #define DUMP_RESTORE_OFF_MODE      'r'
 #define DUMP_HOTWATER_TIMEOUT      'h'
 #define DUMP_CMD_RESPONSE          '?'
 #define DUMP_CMD_MODE_CHANGE       'c'
+#define DUMP_ERROR                 'e'
+#define DUMP_NORMAL                'n'
 
 void makeDump(char dumpType) {
   // atomically read everything
@@ -283,52 +287,23 @@ void writeValues() {
   }
 }
 
-//------- CHECK ERROR --------
-
-#define ERROR_TIMEOUT (60 * 60000L) // 1 hour
-
-Metro errorTimeout(100);
-
-void checkError() {
-  if (getErrorBits() != 0 && errorTimeout.check()) {
-    println("{C:ERROR}*");
-    errorTimeout.interval(ERROR_TIMEOUT);
-    errorTimeout.reset();
-  }
-}
-
 //------- SAVE MODE --------
-
-byte savedMode = 0;
-
-#define EEPROM_MODE 1
-
-void setupSavedMode() {
-  savedMode = EEPROM.read(EEPROM_MODE);
-}
 
 void saveMode() {
   byte mode = getMode(); // atomic read
-  if (mode != savedMode && mode != 0) {
-    savedMode = mode;
-    EEPROM.write(EEPROM_MODE, mode);
-  }
+  if (mode != 0 && mode != getSavedMode())
+    setSavedMode(mode);
 }
 
-//------- PARSE COMMAND -------
-
-#define PARSE_0 0
-#define PARSE_1 1
-#define PARSE_2 2
-#define PARSE_ANY 3
-
-byte parseState = PARSE_0;
-char parseCmd;
+//------- EXECUTE COMMANDS -------
 
 void executeCommand(char cmd) {
   switch (cmd) {
-  case '?':
+  case CMD_DUMP_STATE:
     makeDump(DUMP_CMD_RESPONSE);
+    break;
+  case CMD_DUMP_CONFIG:
+    makeConfigDump();
     break;
   case '1':
   case '2':
@@ -341,42 +316,13 @@ void executeCommand(char cmd) {
   }
 }
 
-void parseCommand() {
-  while (Serial.available()) {
-    char c = Serial.read();
-    boolean eol = (c == '\r' || c == '\n' || c == '!');
-    switch (parseState) {
-    case PARSE_0:
-      parseState = eol ? PARSE_0 : (c == 'C' || c == '*') ? PARSE_1
-        : PARSE_ANY;
-      break;
-    case PARSE_1:
-      parseCmd = c;
-      parseState = eol ? PARSE_0
-        : (c == '?' || (c >= '1' && c <= '4')) ? PARSE_2
-        : PARSE_ANY;
-      break;
-    case PARSE_2:
-      if (eol) {
-        executeCommand(parseCmd);
-        parseState = PARSE_0;
-      } 
-      else
-        parseState = PARSE_ANY;
-      break;
-    case PARSE_ANY:
-      parseState = eol ? PARSE_0 : PARSE_ANY;
-      break;
-    }
-  }
-}
-
 //------- UPDATE/RESTORE MODE -------
 
 #define HOTWATER_TIMEOUT (90 * 60000L) // 90 mins = 1.5 hours
 
 void updateMode() {
   byte mode = getMode(); // read current mode atomically
+  byte savedMode = getSavedMode();
   if (mode != 0 && mode != savedMode) {
     // forbit direct transition from OFF to WORKING
     if (savedMode == MODE_OFF && mode == MODE_WORKING) {
@@ -398,6 +344,30 @@ void updateMode() {
   }
 }  
 
+//------- CHECK ERROR -------
+
+boolean wasError = false;
+
+void checkError() {
+  boolean isError = getErrorBits() != 0;
+  if (wasError != isError) {
+    wasError = isError;
+    makeDump(isError ? DUMP_ERROR : DUMP_NORMAL);
+  }
+}
+
+//------- CHECK FORCED MODE -------
+
+void checkForce() {
+  switch (getSavedForce()) {
+  case FORCE_ON:
+    setForceOn(true);
+    break;
+  default:
+    setForceOn(false);
+  }
+}
+
 //------- BLINKING LED -------
 
 #define LED_PIN 13
@@ -416,11 +386,11 @@ void blinkLed() {
 
 void setup() {
   setupPrint();
+  println("{C:ControlHeater started}*");
   ds.setup();
   setupState();
-  setupSavedMode();
   setupCommand();
-  println("{C:ControlHeater started}*");
+  makeConfigDump();
 }
 
 void loop() {
@@ -432,7 +402,9 @@ void loop() {
   saveHistory();
   dumpState();
   writeValues();
-  parseCommand();
+  executeCommand(parseCommand());
+  checkError();
+  checkForce();
   blinkLed();
 }
 
