@@ -76,7 +76,7 @@ int hWorkMinutes = 0;
 int hDeltaTemp = 0;
 Metro hPeriod(15000, true); // 15 sec
 
-void saveHistory() {
+inline void saveHistory() {
   // note: only save history with valid temperature measurements
   int temp = ds.value();
   if (temp != DS18B20_NONE && hPeriod.check()) {
@@ -109,7 +109,7 @@ void saveHistory() {
 
 boolean firstDump = true; 
 Metro dump(5000);
-char dumpLine[] = "[C:0 s0000000+??.? d+0.00 p00.0 q0.0 w00 i0000-00.0 a000+00.0 u00000000]* ";
+char dumpLine[] = "[C:0 s0000000+??.? d+0.00 p00.0 q0.0 w00 i000-00.0 a000+00.0 u00000000]* ";
 
 byte indexOf(byte start, char c) {
   for (byte i = start; dumpLine[i] != 0; i++)
@@ -231,7 +231,7 @@ void makeDump(char dumpType) {
   firstDump = false;
 }
 
-void dumpState() {
+inline void dumpState() {
   if (dump.check())
     makeDump(firstDump ? DUMP_FIRST : DUMP_REGULAR);
 }
@@ -265,7 +265,7 @@ void appendToBuffer(char tag, int value, byte fmt = 0) {
   writeBufPos += size;
 }
 
-void writeToBuffer() {
+inline void writeToBuffer() {
   int temp = ds.value();
   if (temp != DS18B20_NONE)
     appendToBuffer('a', roundTemp1(temp), 1 | FMT_SIGN);
@@ -278,7 +278,7 @@ void writeToBuffer() {
   appendToBuffer('h', getPresetTime(), 1);
 }
 
-void writeValues() {
+inline void writeValues() {
   if (writeInterval.check()) {
     writeToBuffer();
     flushWriteBuffer();
@@ -320,7 +320,7 @@ void executeCommand(char cmd) {
 
 #define HOTWATER_TIMEOUT (90 * 60000L) // 90 mins = 1.5 hours
 
-void updateMode() {
+inline void updateMode() {
   byte mode = getMode(); // read current mode atomically
   byte savedMode = getSavedMode();
   if (mode != 0 && mode != savedMode) {
@@ -348,7 +348,7 @@ void updateMode() {
 
 boolean wasError = false;
 
-void checkError() {
+inline void checkError() {
   boolean isError = getErrorBits() != 0;
   if (wasError != isError) {
     wasError = isError;
@@ -358,10 +358,27 @@ void checkError() {
 
 //------- CHECK FORCED MODE -------
 
-void checkForce() {
+inline void checkForceAuto() {
+  uint8_t period = getSavedPeriod();
+  uint8_t duration = getSavedDuration();
+  if (period == 0 || duration == 0)
+    return; // force-auto is not configured
+  if (getActiveBits() != 0) {
+    if (activeMinutes > duration) // is active for duration -- force off
+      setForceOn(false);
+  } else {
+    if (inactiveMinutes > period) // inactive for period -- force on
+      setForceOn(true);
+  }
+}
+
+inline void checkForce() {
   switch (getSavedForce()) {
   case FORCE_ON:
     setForceOn(true);
+    break;
+  case FORCE_AUTO:
+    checkForceAuto();
     break;
   default:
     setForceOn(false);
@@ -375,7 +392,7 @@ void checkForce() {
 Metro led(1000, true);
 boolean ledState = false;
 
-void blinkLed() {
+inline void blinkLed() {
   if (led.check()) {
     ledState = !ledState;
     digitalWrite(LED_PIN, ledState);

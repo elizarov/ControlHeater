@@ -1,10 +1,14 @@
+#include <WProgram.h>
+
 #include "parse.h"
 #include "persist.h"
 
-#define PARSE_ANY    0
-#define PARSE_ATTN   1    // Attention char '!' received, wait for 'C'
-#define PARSE_WCMD   2    // '!C' was read, wait for command char
-#define PARSE_FORCE  3    // '!CF' was read, wait for arg
+#define PARSE_ANY      0
+#define PARSE_ATTN     1      // Attention char '!' received, wait for 'C'
+#define PARSE_WCMD     2      // '!C' was read, wait for command char
+#define PARSE_FORCE    'F'    // '!CF' was read, wait for arg
+#define PARSE_PERIOD   'P'    // '!CP' was read, wait for arg
+#define PARSE_DURATION 'D'    // '!CD' was read, wait for arg
 
 byte parseState = PARSE_ANY;
 byte parseArg;
@@ -25,7 +29,9 @@ inline char parseChar(char ch) {
       parseState = PARSE_ANY;
       return ch; // command for external processing
     case 'F':
-      parseState = PARSE_FORCE;
+    case 'P':
+    case 'D':
+      parseState = ch;
       parseArg = 0;
       break;
     default:
@@ -33,16 +39,29 @@ inline char parseChar(char ch) {
     }
     break;
   case PARSE_FORCE:
+  case PARSE_PERIOD:
+  case PARSE_DURATION:
      if (ch >= '0' && ch <= '9') {
        parseArg *= 10;
        parseArg += ch - '0';
        break;
      }
-     parseState = PARSE_ANY;
      if (ch == '\r' || ch == '\n' || ch == '!') {
-       setSavedForce(parseArg);
+       switch (parseState) {
+       case PARSE_FORCE:
+         setSavedForce(parseArg);
+         break;
+       case PARSE_PERIOD:
+         setSavedPeriod(parseArg);
+         break;
+       case PARSE_DURATION:
+         setSavedDuration(parseArg);
+         break;
+       }
+       parseState = PARSE_ANY;
        return CMD_DUMP_CONFIG;
      }
+     parseState = PARSE_ANY;
      break;
   }
   return 0;

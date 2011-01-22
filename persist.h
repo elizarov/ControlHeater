@@ -1,16 +1,20 @@
 #ifndef PERSIST_H_
 #define PERSIST_H_
 
-#include <WProgram.h>
-
-byte getSavedMode();
-void setSavedMode(byte mode);
+uint8_t getSavedMode();
+void setSavedMode(uint8_t mode);
 
 #define FORCE_OFF    0
 #define FORCE_ON     1
 #define FORCE_AUTO   2
 
-byte getSavedForce();
-void setSavedForce(byte force);
+uint8_t getSavedForce();
+void setSavedForce(uint8_t force);
+
+uint8_t getSavedPeriod();
+void setSavedPeriod(uint8_t period);
+
+uint8_t getSavedDuration();
+void setSavedDuration(uint8_t duration);
 
 #endif /* PERSIST_H_ */

@@ -1,8 +1,6 @@
 #ifndef PARSE_H_
 #define PARSE_H_
 
-#include <WProgram.h>
-
 #define CMD_DUMP_STATE  '?'
 #define CMD_DUMP_CONFIG 'C'
 
