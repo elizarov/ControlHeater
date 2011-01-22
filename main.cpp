@@ -318,8 +318,6 @@ void executeCommand(char cmd) {
 
 //------- UPDATE/RESTORE MODE -------
 
-#define HOTWATER_TIMEOUT (90 * 60000L) // 90 mins = 1.5 hours
-
 inline void updateMode() {
   byte mode = getMode(); // read current mode atomically
   byte savedMode = getSavedMode();
@@ -336,7 +334,11 @@ inline void updateMode() {
     }
   }
   mode = getMode(); // atomic reread
-  if (mode == MODE_HOTWATER && millis() - getModeTime(MODE_HOTWATER) > HOTWATER_TIMEOUT) {
+  uint8_t hotwaterTimeoutMins = getSavedHotwater();
+  if (hotwaterTimeoutMins != 0 &&
+      mode == MODE_HOTWATER &&
+      (long)(millis() - getModeTime(MODE_HOTWATER)) > (hotwaterTimeoutMins * 60000L))
+  {
     // HOTWATER mode for too long... switch to WORKING
     changeMode(MODE_WORKING);
     saveMode();

@@ -4,6 +4,9 @@
 uint8_t getSavedMode();
 void setSavedMode(uint8_t mode);
 
+uint8_t getSavedHotwater();
+void setSavedHotwater(uint8_t hotwater);
+
 #define FORCE_OFF    0
 #define FORCE_ON     1
 #define FORCE_AUTO   2

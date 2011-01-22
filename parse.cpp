@@ -6,6 +6,8 @@
 #define PARSE_ANY      0
 #define PARSE_ATTN     1      // Attention char '!' received, wait for 'C'
 #define PARSE_WCMD     2      // '!C' was read, wait for command char
+
+#define PARSE_HOTWATER 'H'    // '!CH' was read, wait for arg
 #define PARSE_FORCE    'F'    // '!CF' was read, wait for arg
 #define PARSE_PERIOD   'P'    // '!CP' was read, wait for arg
 #define PARSE_DURATION 'D'    // '!CD' was read, wait for arg
@@ -28,9 +30,10 @@ inline char parseChar(char ch) {
     case '1': case '2': case '3': case '4':
       parseState = PARSE_ANY;
       return ch; // command for external processing
-    case 'F':
-    case 'P':
-    case 'D':
+    case PARSE_HOTWATER:
+    case PARSE_FORCE:
+    case PARSE_PERIOD:
+    case PARSE_DURATION:
       parseState = ch;
       parseArg = 0;
       break;
@@ -38,6 +41,7 @@ inline char parseChar(char ch) {
       parseState = PARSE_ANY;
     }
     break;
+  case PARSE_HOTWATER:
   case PARSE_FORCE:
   case PARSE_PERIOD:
   case PARSE_DURATION:
@@ -48,6 +52,9 @@ inline char parseChar(char ch) {
      }
      if (ch == '\r' || ch == '\n' || ch == '!') {
        switch (parseState) {
+       case PARSE_HOTWATER:
+         setSavedHotwater(parseArg);
+         break;
        case PARSE_FORCE:
          setSavedForce(parseArg);
          break;

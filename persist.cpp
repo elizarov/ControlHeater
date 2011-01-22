@@ -6,6 +6,7 @@
 #define FORCE      ((uint8_t*)2)
 #define PERIOD     ((uint8_t*)3)
 #define DURATION   ((uint8_t*)4)
+#define HOTWATER   ((uint8_t*)5)
 
 uint8_t getSavedMode() {
   return eeprom_read_byte(MODE);
@@ -13,6 +14,14 @@ uint8_t getSavedMode() {
 
 void setSavedMode(uint8_t mode) {
   eeprom_write_byte(MODE, mode);
+}
+
+uint8_t getSavedHotwater() {
+  return eeprom_read_byte(HOTWATER);
+}
+
+void setSavedHotwater(uint8_t hotwater) {
+  eeprom_write_byte(HOTWATER, hotwater);
 }
 
 uint8_t getSavedForce() {

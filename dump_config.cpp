@@ -6,6 +6,8 @@
 void makeConfigDump() {
   Serial.print("[C M");
   Serial.print(getSavedMode(), DEC);
+  Serial.print(" H");
+  Serial.print(getSavedHotwater(), DEC);
   Serial.print(" F");
   Serial.print(getSavedForce(), DEC);
   Serial.print(" P");
