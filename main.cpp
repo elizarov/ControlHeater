@@ -366,10 +366,10 @@ inline void checkForceAuto() {
   if (period == 0 || duration == 0)
     return; // force-auto is not configured
   if (getActiveBits() != 0) {
-    if (activeMinutes > duration) // is active for duration -- force off
+    if (activeMinutes >= duration) // is active for duration -- force off
       setForceOn(false);
   } else {
-    if (inactiveMinutes > period) // inactive for period -- force on
+    if (inactiveMinutes >= period) // inactive for period -- force on
       setForceOn(true);
   }
 }
