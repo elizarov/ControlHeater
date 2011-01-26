@@ -1,7 +1,7 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include <WProgram.h>
+#include <stdint.h>
 
 #define FMT_PREC     0x0f  // define number precision in lower bits
 #define FMT_SIGN     0x10  // print sign at the first position 
@@ -10,8 +10,8 @@
 
 extern const char HEX_CHARS[];
 
-extern byte formatDecimal(int x, char* pos, byte size, byte fmt = 0);
-extern byte formatDecimal(long x, char* pos, byte size, byte fmt = 0);
+extern uint8_t formatDecimal(int16_t x, char* pos, uint8_t size, uint8_t fmt = 0);
+extern uint8_t formatDecimal(int32_t x, char* pos, uint8_t size, uint8_t fmt = 0);
 
 #endif
 

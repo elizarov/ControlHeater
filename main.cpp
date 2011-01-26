@@ -109,7 +109,7 @@ inline void saveHistory() {
 
 boolean firstDump = true; 
 Metro dump(5000);
-char dumpLine[] = "[C:0 s0000000+??.? d+0.00 p00.0 q0.0 w00 i000-00.0 a000+00.0 u00000000]* ";
+char dumpLine[] = "[C:0 s0000000+??.? d+0.00 p00.0 q0.0 w00 i000-0.0 a000+0.0 u00000000]* ";
 
 byte indexOf(byte start, char c) {
   for (byte i = start; dumpLine[i] != 0; i++)
