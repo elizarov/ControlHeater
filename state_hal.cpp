@@ -30,17 +30,9 @@ void scanStateInterruptHandler() {
   byte newState = 0;
   for (byte i = 0; i < SCAN_STATES; i++)
     bitWrite(newState, i, !digitalRead(statePins[i]));
+  long time = millis();
   if (scanState != newState) {
     scanState = newState;
-    long time = millis();
-    if (newState & (1 << STATE_ERROR)) {
-      if (time - lastErrorTime < ERROR_TIMEOUT)
-        errorCnt = 2;
-      else
-        errorCnt = 1;
-      lastErrorTime = time;
-    } else
-      errorCnt = 0;
     byte newMode = curMode;
     for (int i = 0; i < MAX_MODE; i++)
       if ((newState & MODE_MASK) == (1 << i)) {
@@ -51,6 +43,16 @@ void scanStateInterruptHandler() {
       modeTime[newMode] = time;
       curMode = newMode;
     }
+  }
+  if (newState & (1 << STATE_ERROR)) {
+    if (time - lastErrorTime < ERROR_TIMEOUT)
+      errorCnt = 2;
+    else
+      errorCnt = 1;
+    lastErrorTime = time;
+  } else if (time - lastErrorTime >= ERROR_TIMEOUT) {
+    errorCnt = 0;
+    lastErrorTime = time - 2 * ERROR_TIMEOUT;
   }
   readCounter++;
   turnedOnCache = UNKNOWN;
@@ -65,18 +67,18 @@ void setupState() {
 
 Metro checkStatePeriod(100, true); // 100 ms
 
-boolean checkState() {
-  boolean updated = false;
+void checkState() {
   long time = millis();
   // atomically check & reset mode if not ticking
   if (checkStatePeriod.check()) {
     noInterrupts();
     if (readCounter == 0 && curMode != 0) { 
       modeTime[0] = time;
+      scanState = 0;
       curMode = 0;
-      errorCnt = 2; // indicates a error condition for getErrorBits
+      errorCnt = 0; // do not report error condition for getErrorBits
+      lastErrorTime = time - 2 * ERROR_TIMEOUT; // but do not report error when turned on
       turnedOnCache = UNKNOWN;
-      updated = true;
     } else
       readCounter = 0;
     interrupts();
@@ -86,7 +88,6 @@ boolean checkState() {
   if (time - lastErrorTime > 2 * ERROR_TIMEOUT)
     lastErrorTime = time - 2 * ERROR_TIMEOUT;
   interrupts();
-  return updated;
 }
 
 //------- CACHING READ FOR TURNED ON PIN -------

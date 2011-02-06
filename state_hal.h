@@ -25,7 +25,7 @@
 #define STATE_TURNED_ON      6
 
 void setupState();
-boolean checkState();
+void checkState();
 
 // Returns a combination of STATE_xxx bits
 byte getState();

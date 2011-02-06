@@ -164,11 +164,12 @@ inline void prepareTemp2(int x, int pos, int size) {
 #define DUMP_REGULAR               0
 #define DUMP_FIRST                 HIGHLIGHT_CHAR
 #define DUMP_EXTERNAL_MODE_CHANGE  'b'
-#define DUMP_INTERNAL_MODE_CHANGE  'i'
 #define DUMP_RESTORE_OFF_MODE      'r'
 #define DUMP_HOTWATER_TIMEOUT      'h'
 #define DUMP_CMD_RESPONSE          '?'
 #define DUMP_CMD_MODE_CHANGE       'c'
+#define DUMP_POWER_LOST            '0'
+#define DUMP_POWER_BACK            '1'
 #define DUMP_ERROR                 'e'
 #define DUMP_NORMAL                'n'
 
@@ -289,10 +290,13 @@ inline void writeValues() {
 
 //------- SAVE MODE --------
 
+byte prevMode;
+
 void saveMode() {
   byte mode = getMode(); // atomic read
   if (mode != 0 && mode != getSavedMode())
     setSavedMode(mode);
+  prevMode = mode; // also store as "previous mode" to track updates
 }
 
 //------- EXECUTE COMMANDS -------
@@ -332,6 +336,10 @@ inline void updateMode() {
       saveMode();
       makeDump(DUMP_EXTERNAL_MODE_CHANGE);
     }
+  } else if (mode != prevMode) {
+     // transition to zero mode or from zero mode
+    makeDump(mode == 0 ? DUMP_POWER_LOST : DUMP_POWER_BACK);
+    prevMode = mode;
   }
   mode = getMode(); // atomic reread
   uint8_t hotwaterTimeoutMins = getSavedHotwater();
@@ -415,15 +423,14 @@ void setup() {
 void loop() {
   ds.read();
   checkInactive();
-  if (checkState())
-    makeDump(DUMP_INTERNAL_MODE_CHANGE);
+  checkState();
   updateMode();
   saveHistory();
-  dumpState();
-  writeValues();
   executeCommand(parseCommand());
   checkError();
   checkForce();
   blinkLed();
+  dumpState();
+  writeValues();
 }
 
