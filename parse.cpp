@@ -1,4 +1,4 @@
-#include <WProgram.h>
+#include <Arduino.h>
 
 #include "parse.h"
 #include "persist.h"

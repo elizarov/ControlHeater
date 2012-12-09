@@ -1,4 +1,4 @@
-#include <WProgram.h>
+#include <Arduino.h>
 #include <OneWire.h>
 #include <Metro.h>
 

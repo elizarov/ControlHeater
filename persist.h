@@ -1,6 +1,8 @@
 #ifndef PERSIST_H_
 #define PERSIST_H_
 
+#include <Arduino.h>
+
 uint8_t getSavedMode();
 void setSavedMode(uint8_t mode);
 

@@ -1,4 +1,4 @@
-#include <WProgram.h>
+#include <Arduino.h>
 
 #include "dump_config.h"
 #include "persist.h"

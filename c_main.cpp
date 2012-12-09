@@ -1,7 +1,7 @@
 #include <OneWire.h>
 #include <Metro.h>
 
-#include "print.h"
+#include "xprint.h"
 #include "ds18b20.h"
 #include "state_hal.h"
 #include "command_hal.h"
@@ -9,7 +9,24 @@
 #include "persist.h"
 #include "parse.h"
 #include "dump_config.h"
-#include "util.h"
+#include "fmt_util.h"
+#include "blink_led.h"
+
+//------- ALL TIME DEFS ------
+
+#define INITIAL_DUMP_INTERVAL 2000L  // 2 sec
+#define PERIODIC_DUMP_INTERVAL 30000L // 30 sec
+#define PERIODIC_DUMP_SKEW 5000L      // 5 sec 
+
+#define INITIAL_WRITE_INTERVAL   3000L // 3 sec
+#define PERIODIC_WRITE_INTERVAL 60000L // 1 min
+#define PERIODIC_WRITE_SKEW      5000L // 5 sec
+
+#define RESET_CONDITION_WAIT_INTERVAL 180000L // 3 min
+
+#define RESET_ACTIVE_MINUTES_THRESHOLD 50 // reset when working for 50 mins
+#define RESET_TEMP_DROP_THRESHOLD     -10 // ... and loosing 0.1 deg C/hour or more
+#define RESET_TEMP_ABS_THRESHOLD     2100 // ... and temparature is below +21 deg C
 
 //------- READ TEMPERATURE------
 
@@ -61,6 +78,8 @@ void checkInactive() {
 // Keep an hour of history, record every 15 second 
 #define MAX_HISTORY 240 
 
+#define MAX_WORK_MINUTES 60
+
 struct HistoryItem {
   byte work;
   int temp;
@@ -87,7 +106,7 @@ inline void saveHistory() {
     h[hTail].work = work;
     h[hTail].temp = ds.value();
     // recompute stats
-    hWorkMinutes = hSumWork * 60 / hSize;
+    hWorkMinutes = hSumWork * MAX_WORK_MINUTES / hSize;
     hDeltaTemp = temp - h[hHead].temp;
     // move queue tail
     hTail++;
@@ -108,7 +127,7 @@ inline void saveHistory() {
 #define HIGHLIGHT_CHAR '*'
 
 boolean firstDump = true; 
-Metro dump(5000);
+Metro dump(INITIAL_DUMP_INTERVAL);
 char dumpLine[] = "[C:0 s0000000+??.? d+0.00 p00.0 q0.0 w00 i000-0.0 a000+0.0 u00000000]* ";
 
 byte indexOf(byte start, char c) {
@@ -227,7 +246,8 @@ void makeDump(char dumpType) {
       dumpLine[i++] = HIGHLIGHT_CHAR; // must end with highlight (signal) char
     dumpLine[i++] = 0; // and the very last char must be zero
   }
-  println(dumpLine);
+  waitPrintln(dumpLine);
+  dump.interval(PERIODIC_DUMP_INTERVAL + random(-PERIODIC_DUMP_SKEW, PERIODIC_DUMP_SKEW));
   dump.reset();
   firstDump = false;
 }
@@ -243,9 +263,6 @@ inline void dumpState() {
 #define WRITE_BUF_START    3
 #define WRITE_BUF_MAX_ITEM 6
 
-#define INITIAL_WRITE_INTERVAL   2000L // 2 sec
-#define PERIODIC_WRITE_INTERVAL 60000L // 1 min
-
 Metro writeInterval(INITIAL_WRITE_INTERVAL);
 char writeBuf[WRITE_BUF_SIZE] = "!C=";
 byte writeBufPos = WRITE_BUF_START;
@@ -254,7 +271,7 @@ void flushWriteBuffer() {
   if (writeBufPos == WRITE_BUF_START)
     return;
   writeBuf[writeBufPos] = 0;
-  println(&writeBuf[0]);
+  waitPrintln(&writeBuf[0]);
   writeBufPos = WRITE_BUF_START;
 }
 
@@ -283,7 +300,7 @@ inline void writeValues() {
   if (writeInterval.check()) {
     writeToBuffer();
     flushWriteBuffer();
-    writeInterval.interval(PERIODIC_WRITE_INTERVAL);
+    writeInterval.interval(PERIODIC_WRITE_INTERVAL + random(-PERIODIC_WRITE_SKEW, PERIODIC_WRITE_SKEW));
     writeInterval.reset();
   }
 }
@@ -395,28 +412,58 @@ inline void checkForce() {
   }
 }
 
-//------- BLINKING LED -------
+//------- CHECK FOR RESET -------
 
-#define LED_PIN 13
+inline boolean hasResetCondition() {
+  if (getErrorBits() != 0) 
+    return true; // reset when error 
+  int temp = ds.value();
+  if (wasActive && activeMinutes >= RESET_ACTIVE_MINUTES_THRESHOLD && 
+      hDeltaTemp < RESET_TEMP_DROP_THRESHOLD && 
+      temp != DS18B20_NONE && temp < RESET_TEMP_ABS_THRESHOLD)
+    return true; // reset when supposed to be working for 30 min, but loosing temperature, and temp is low
+  return false;  
+}
 
-Metro led(1000, true);
-boolean ledState = false;
+long lastResetConditionTime;
+long lastOkConditionTime;
+long resetConditionWaitInterval = RESET_CONDITION_WAIT_INTERVAL;
 
-inline void blinkLed() {
-  if (led.check()) {
-    ledState = !ledState;
-    digitalWrite(LED_PIN, ledState);
+void checkReset() {
+  long now = millis();
+  if (!hasResetCondition()) {
+    // Ok condition
+    lastResetConditionTime = 0;
+    if (lastOkConditionTime == 0) // for a first time after reset condition
+      lastOkConditionTime = now;
+    else if (now - lastOkConditionTime > resetConditionWaitInterval)
+      resetConditionWaitInterval = RESET_CONDITION_WAIT_INTERVAL; // ok for long enough -- set interval to default 
+    return;
   }
+  // Reset condition 
+  if (lastResetConditionTime == 0) {
+    // for a first time after ok condition
+    lastResetConditionTime = now;
+    return;  
+  }
+  long wasResetConditionInterval = now - lastResetConditionTime;
+  if (wasResetConditionInterval < resetConditionWaitInterval)
+    return; // not long enough... wait
+  // long enough -> perform reset
+  waitPrint();
+  print_P(PSTR("!RR\r\n")); // send reset signal
+  resetConditionWaitInterval *= 2; // next time wait longer
 }
 
 //------- SETUP & MAIN -------
 
 void setup() {
   setupPrint();
-  println("{C:ControlHeater started}*");
   ds.setup();
   setupState();
   setupCommand();
+  waitPrint();
+  print_P(PSTR("{C:ControlHeater started}*\r\n"));
   makeConfigDump();
 }
 
@@ -429,8 +476,8 @@ void loop() {
   executeCommand(parseCommand());
   checkError();
   checkForce();
+  checkReset();
   blinkLed();
   dumpState();
   writeValues();
 }
-

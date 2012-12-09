@@ -1,7 +1,7 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include <stdint.h>
+#include <inttypes.h>
 
 #define FMT_PREC     0x0f  // define number precision in lower bits
 #define FMT_SIGN     0x10  // print sign at the first position 

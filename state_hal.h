@@ -1,7 +1,7 @@
 #ifndef STATE_HAL_H
 #define STATE_HAL_H
 
-#include <WProgram.h>
+#include <Arduino.h>
 
 #define MAX_MODE   4
 #define STATE_SIZE 7
