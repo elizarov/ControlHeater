@@ -388,11 +388,35 @@ inline void checkError() {
 
 //------- CHECK FORCED MODE -------
 
+boolean wasForced;
+boolean wasForcedOff;
+byte wasForcedMode;
+byte wasForcedSavedForce;
+
 inline void checkForceDuration() {
-  uint8_t duration = getSavedDuration();
-  if (wasActive)
-     // keed forced on util it is active for specifed duration 
-    setForceOn(activeMinutes < duration);
+  if (wasActive) {
+    if (wasForcedOff)
+      return; // force was canceled by some event (like mode change) during this active cycle 
+    // keed forced on util it is active for specifed duration 
+    boolean force = activeMinutes < getSavedDuration();
+    // also track changes in operation mode & saved mode and cancel force if any of them changes
+    if (force) {
+      if (!wasForced) {
+        wasForcedMode = getMode();
+        wasForcedSavedForce = getSavedForce();
+      } else if (wasForcedMode != getMode() || wasForcedSavedForce != getSavedForce()) {
+        // something has changed -- cancel force
+        force = false;
+        wasForcedOff = true;
+      }
+    }
+    setForceOn(force);
+    wasForced = force;
+  } else {
+    // cleanup state when inactive
+    wasForced = false;
+    wasForcedOff = false;
+  }
 }
 
 inline void checkForceAuto() {
@@ -400,7 +424,7 @@ inline void checkForceAuto() {
   uint8_t duration = getSavedDuration();
   if (period == 0 || duration == 0)
     return; // force-auto is not configured
-  // when nactive for period -- force on
+  // when inactive for period -- force on
   if (wasInactive && inactiveMinutes >= period) 
       setForceOn(true);
   // checkForceDuration method will turn it off when duration passes    
