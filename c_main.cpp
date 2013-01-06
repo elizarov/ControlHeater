@@ -388,18 +388,22 @@ inline void checkError() {
 
 //------- CHECK FORCED MODE -------
 
+inline void checkForceDuration() {
+  uint8_t duration = getSavedDuration();
+  if (wasActive)
+     // keed forced on util it is active for specifed duration 
+    setForceOn(activeMinutes < duration);
+}
+
 inline void checkForceAuto() {
   uint8_t period = getSavedPeriod();
   uint8_t duration = getSavedDuration();
   if (period == 0 || duration == 0)
     return; // force-auto is not configured
-  if (getActiveBits() != 0) {
-    if (activeMinutes >= duration) // is active for duration -- force off
-      setForceOn(false);
-  } else {
-    if (inactiveMinutes >= period) // inactive for period -- force on
+  // when nactive for period -- force on
+  if (wasInactive && inactiveMinutes >= period) 
       setForceOn(true);
-  }
+  // checkForceDuration method will turn it off when duration passes    
 }
 
 inline void checkForce() {
@@ -409,9 +413,9 @@ inline void checkForce() {
     break;
   case FORCE_AUTO:
     checkForceAuto();
-    break;
+    // !!! falls through to force active for min duration !!!
   default:
-    setForceOn(false);
+    checkForceDuration();
   }
 }
 
