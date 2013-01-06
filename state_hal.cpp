@@ -1,4 +1,5 @@
 #include "state_hal.h"
+#include "debounce.h"
 
 #include <Metro.h>
 
@@ -19,6 +20,9 @@ volatile int readCounter; // number of times interrupt pin was triggered
 volatile byte errorCnt; // # of times error seen in ERROR_TIMEOUT = 0, 1, or 2+
 volatile long lastErrorTime; // last time error state was seen
 volatile byte turnedOnCache; // cached value of turned on state or UNKNOWN
+
+Debounce<byte> stableErrorBits;
+Debounce<byte> stableActiveBits;
 
 boolean forcedOn; // last setForceOn value
 
@@ -125,13 +129,14 @@ long getModeTime(byte mode) {
   return modeTime[mode];  
 }
 
-// internal check -- report error when blinked error light twice in ERROR_TIMEOUT
+// internal check -- report error when blinked error light twice in ERROR_TIMEOUT and use debouncing
 byte getErrorBits() {
-  return errorCnt > 1 ? 1 : 0;
+  return stableErrorBits.update(errorCnt > 1 ? 1 : 0);
 }
 
+// use debouncing to provide a more stable measurement base
 byte getActiveBits() {
-  return (getState() >> STATE_ACTIVE) & 3;
+  return stableActiveBits.update((getState() >> STATE_ACTIVE) & 3);
 }
 
 //------- FORCED_TURN_ON -------
