@@ -1,16 +1,17 @@
 #include <Arduino.h>
-#include <Metro.h>
 
 #include "blink_led.h"
 
 #define  BLINK_LED_PIN 13
 
-Metro blinkLedTime(1000, true);
+long blinkSwitchTime;
 boolean blinkLedState = false;
 
-void blinkLed() {
-  if (blinkLedTime.check()) {
+void blinkLed(int time) {
+  long now = millis();
+  if (now - blinkSwitchTime > time) {  
     blinkLedState = !blinkLedState;
+    blinkSwitchTime = now;
     digitalWrite(BLINK_LED_PIN, blinkLedState);
   }
 }

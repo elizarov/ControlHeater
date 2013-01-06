@@ -153,3 +153,7 @@ void setForceOn(boolean on) {
     digitalWrite(TURN_ON_PIN, 0); // no pullup
   }
 }
+
+boolean isForceOn() {
+  return forcedOn;  
+}

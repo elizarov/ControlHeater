@@ -41,5 +41,6 @@ byte getActiveBits();
 
 // force heater on
 void setForceOn(boolean on);
+boolean isForceOn();
 
 #endif

@@ -28,6 +28,9 @@
 #define RESET_TEMP_DROP_THRESHOLD     -10 // ... and loosing 0.1 deg C/hour or more
 #define RESET_TEMP_ABS_THRESHOLD     2100 // ... and temparature is below +21 deg C
 
+#define BLINK_TIME_FORCED    250 // blink two times per second
+#define BLINK_TIME_NORMAL   1000 // normal flip one every second
+
 //------- READ TEMPERATURE------
 
 DS18B20 ds(A2); // use pin A2
@@ -477,7 +480,7 @@ void loop() {
   checkError();
   checkForce();
   checkReset();
-  blinkLed();
   dumpState();
   writeValues();
+  blinkLed(isForceOn() ? BLINK_TIME_FORCED : BLINK_TIME_NORMAL);
 }
