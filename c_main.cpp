@@ -390,61 +390,6 @@ inline void checkError() {
 
 //------- CHECK FORCED MODE -------
 
-boolean wasForced;
-boolean wasForcedOff;
-State::Mode wasForcedMode;
-Force::Mode wasForcedSavedForce;
-
-inline void checkForceDuration() {
-  if (wasActive) {
-    if (wasForcedOff)
-      return; // force was canceled by some event (like mode change) during this active cycle 
-    // keed forced on util it is active for specifed duration 
-    boolean force = activeMinutes < config.duration;
-    // also track changes in operation mode & saved mode and cancel force if any of them changes
-    if (force) {
-      if (!wasForced) {
-        wasForcedMode = getMode();
-        wasForcedSavedForce = config.force;
-      } else if (wasForcedMode != getMode() || wasForcedSavedForce != config.force) {
-        // something has changed -- cancel force
-        force = false;
-        wasForcedOff = true;
-      }
-    }
-    setForceOn(force);
-    wasForced = force;
-  } else {
-    // cleanup state when inactive
-    wasForced = false;
-    wasForcedOff = false;
-  }
-}
-
-inline void checkForceAuto() {
-  byte period = config.period;
-  byte duration = config.duration;
-  if (period == 0 || duration == 0)
-    return; // force-auto is not configured
-  // when inactive for period -- force on
-  if (wasInactive && inactiveMinutes >= period) 
-      setForceOn(true);
-  // checkForceDuration method will turn it off when duration passes    
-}
-
-inline void checkForce() {
-  switch (config.force) {
-  case Force::ON:
-    setForceOn(true);
-    break;
-  case Force::AUTO:
-    checkForceAuto();
-    // !!! falls through to force active for min duration !!!
-  default:
-    checkForceDuration();
-  }
-}
-
 //------- CHECK FOR RESET -------
 
 inline boolean hasResetCondition() {
@@ -508,8 +453,8 @@ void loop() {
   saveHistory();
   executeCommand(parseCommand());
   checkError();
-  checkForce();
   checkReset();
+  force.check();
   dumpState();
   writeValues();
   blinkLed(isForceOn() ? BLINK_TIME_FORCED : BLINK_TIME_NORMAL);

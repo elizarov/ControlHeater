@@ -5,7 +5,6 @@
 #include <avr/eeprom.h>
 
 #include "Force.h"
-
 #include "state_hal.h"
 
 class Config {
