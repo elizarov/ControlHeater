@@ -1,7 +1,8 @@
 #include <Arduino.h>
 
+#include "Config.h"
+
 #include "parse.h"
-#include "persist.h"
 
 #define PARSE_ANY      0
 #define PARSE_ATTN     1      // Attention char '!' received, wait for 'C'
@@ -53,16 +54,16 @@ inline char parseChar(char ch) {
      if (ch == '\r' || ch == '\n' || ch == '!') {
        switch (parseState) {
        case PARSE_HOTWATER:
-         setSavedHotwater(parseArg);
+         config.hotwater = parseArg;
          break;
        case PARSE_FORCE:
-         setSavedForce(parseArg);
+         config.force = (Force::Mode)parseArg;
          break;
        case PARSE_PERIOD:
-         setSavedPeriod(parseArg);
+         config.period = parseArg;
          break;
        case PARSE_DURATION:
-         setSavedDuration(parseArg);
+         config.duration = parseArg;
          break;
        }
        parseState = PARSE_ANY;

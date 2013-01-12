@@ -12,7 +12,7 @@ const int UNKNOWN           = 0xff;
 const int ERROR_TIMEOUT = 2000L; // 2 sec
 
 volatile byte scanState; // current STATE_XXX bits from scanState
-volatile Mode curMode;  // current MODE_XXX
+volatile State::Mode curMode;  // current MODE_XXX
 volatile long modeTime[MAX_MODE + 1]; // last time mode was active
 volatile int readCounter; // number of times interrupt pin was triggered
 volatile byte errorCnt; // # of times error seen in ERROR_TIMEOUT = 0, 1, or 2+
@@ -32,10 +32,10 @@ void scanStateInterruptHandler() {
   long time = millis();
   if (scanState != newState) {
     scanState = newState;
-    Mode newMode = curMode;
+    State::Mode newMode = curMode;
     for (int i = 0; i < MAX_MODE; i++)
       if ((newState & MODE_MASK) == (1 << i)) {
-        newMode = (Mode)(i + 1);
+        newMode = (State::Mode)(i + 1);
         break;
       }
     if (curMode != newMode) {
@@ -43,7 +43,7 @@ void scanStateInterruptHandler() {
       curMode = newMode;
     }
   }
-  if (newState & (1 << STATE_ERROR_LED)) {
+  if (newState & (1 << State::ERROR_LED)) {
     if (time - lastErrorTime < ERROR_TIMEOUT)
       errorCnt = 2;
     else
@@ -74,7 +74,7 @@ void checkState() {
     if (readCounter == 0 && curMode != 0) { 
       modeTime[0] = time;
       scanState = 0;
-      curMode = MODE_UNKNOWN;
+      curMode = State::MODE_UNKNOWN;
       errorCnt = 0; // do not report error condition for getErrorBits
       lastErrorTime = time - 2 * ERROR_TIMEOUT; // but do not report error when turned on
       turnedOnCache = UNKNOWN;
@@ -116,24 +116,24 @@ byte getActiveSignalBits() {
 
 // use debouncing to provide a more stable measurement base
 byte getActiveBits() {
-  return ((scanState >> STATE_ACTIVE_LED) & 1) | (getActiveSignalBits() << 1);
+  return ((scanState >> State::ACTIVE_LED) & 1) | (getActiveSignalBits() << 1);
 }
 
 byte getState() {
   byte state = scanState; // atomic read
   // We rebuild error state here based on internal logic
-  state &= ~(1 << STATE_ERROR_LED);
-  state |= getErrorBits() << STATE_ERROR_LED;
+  state &= ~(1 << State::ERROR_LED);
+  state |= getErrorBits() << State::ERROR_LED;
   // add turned on state (not part of scan state)
-  state |= getActiveSignalBits() << STATE_ACTIVE_SIGNAL;
+  state |= getActiveSignalBits() << State::ACTIVE_SIGNAL;
   return state;
 }
 
-Mode getMode() {
+State::Mode getMode() {
   return curMode;  
 }
 
-long getModeTime(Mode mode) {
+long getModeTime(State::Mode mode) {
   return modeTime[mode];  
 }
 

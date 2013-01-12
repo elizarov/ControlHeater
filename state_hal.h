@@ -9,25 +9,27 @@ const int MODE_MASK  = ((1 << MAX_MODE) - 1);
 
 // Valid values for mode
 
-enum Mode {
-  MODE_UNKNOWN  = 0;
-  MODE_WORKING  = 1,
-  MODE_TIMER    = 2,
-  MODE_OFF      = 3,
-  MODE_HOTWATER = 4
-};
+namespace State {
+  enum Mode {
+    MODE_UNKNOWN  = 0,
+    MODE_WORKING  = 1,
+    MODE_TIMER    = 2,
+    MODE_OFF      = 3,
+    MODE_HOTWATER = 4
+  };
 
-// Valid bits for state
-
-enum State {
-  STATE_WORKING_MODE_LED  = 0,
-  STATE_TIMER_MODE_LED    = 1,
-  STATE_OFF_MODE_LED      = 2,
-  STATE_HOTWATER_MODE_LED = 3,
-  STATE_ERROR_LED         = 4,
-  STATE_ACTIVE_LED        = 5,
-  STATE_ACTIVE_SIGNAL     = 6
-};
+  // Valid bits for state
+  
+  enum State {
+    WORKING_MODE_LED  = 0,
+    TIMER_MODE_LED    = 1,
+    OFF_MODE_LED      = 2,
+    HOTWATER_MODE_LED = 3,
+    ERROR_LED         = 4,
+    ACTIVE_LED        = 5,
+    ACTIVE_SIGNAL     = 6
+  };
+}
 
 void setupState();
 void checkState();
@@ -42,10 +44,10 @@ byte getActiveBits();
 byte getState();
 
 // Returns one of MODE_xxx constants
-Mode getMode();
+State::Mode getMode();
 
 // Returns time of the last change to the specified mode
-long getModeTime(Mode mode);
+long getModeTime(State::Mode mode);
 
 // force heater on
 void setForceOn(boolean on);

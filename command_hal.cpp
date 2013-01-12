@@ -9,7 +9,7 @@ byte commandPins[COMMAND_PIN_COUNT] = { 10, 9, 11, 12 };
 
 Metro changeTimeout(300);
 
-void changeMode(byte mode) {
+void changeMode(State::Mode mode) {
   byte pin = commandPins[mode - 1];
   // try to press button at most 3 times 
   for (byte att = 0; att < 3 && getMode() != mode; att++) {

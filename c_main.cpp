@@ -1,12 +1,14 @@
 #include <OneWire.h>
 #include <Metro.h>
 
+#include "Force.h"
+#include "Config.h"
+
 #include "xprint.h"
 #include "ds18b20.h"
 #include "state_hal.h"
 #include "command_hal.h"
 #include "preset_hal.h"
-#include "persist.h"
 #include "parse.h"
 #include "dump_config.h"
 #include "fmt_util.h"
@@ -310,12 +312,12 @@ inline void writeValues() {
 
 //------- SAVE MODE --------
 
-byte prevMode;
+State::Mode prevMode;
 
 void saveMode() {
-  byte mode = getMode(); // atomic read
-  if (mode != 0 && mode != getSavedMode())
-    setSavedMode(mode);
+  State::Mode mode = getMode(); // atomic read
+  if (mode != 0 && mode != config.mode)
+    config.mode = mode;
   prevMode = mode; // also store as "previous mode" to track updates
 }
 
@@ -333,7 +335,7 @@ void executeCommand(char cmd) {
   case '2':
   case '3':
   case '4':
-    changeMode(cmd - '0');
+    changeMode((State::Mode)(cmd - '0'));
     saveMode();
     makeDump(DUMP_CMD_MODE_CHANGE);
     break;
@@ -343,11 +345,11 @@ void executeCommand(char cmd) {
 //------- UPDATE/RESTORE MODE -------
 
 inline void updateMode() {
-  byte mode = getMode(); // read current mode atomically
-  byte savedMode = getSavedMode();
+  State::Mode mode = getMode(); // read current mode atomically
+  State::Mode savedMode = config.mode;
   if (mode != 0 && mode != savedMode) {
     // forbit direct transition from OFF to WORKING
-    if (savedMode == MODE_OFF && mode == MODE_WORKING) {
+    if (savedMode == State::MODE_OFF && mode == State::MODE_WORKING) {
       changeMode(savedMode);
       saveMode();
       makeDump(DUMP_RESTORE_OFF_MODE);
@@ -362,13 +364,13 @@ inline void updateMode() {
     prevMode = mode;
   }
   mode = getMode(); // atomic reread
-  uint8_t hotwaterTimeoutMins = getSavedHotwater();
+  uint8_t hotwaterTimeoutMins = config.hotwater;
   if (hotwaterTimeoutMins != 0 &&
-      mode == MODE_HOTWATER &&
-      (long)(millis() - getModeTime(MODE_HOTWATER)) > (hotwaterTimeoutMins * 60000L))
+      mode == State::MODE_HOTWATER &&
+      (long)(millis() - getModeTime(State::MODE_HOTWATER)) > (hotwaterTimeoutMins * 60000L))
   {
     // HOTWATER mode for too long... switch to WORKING
-    changeMode(MODE_WORKING);
+    changeMode(State::MODE_WORKING);
     saveMode();
     makeDump(DUMP_HOTWATER_TIMEOUT);
   }
@@ -390,21 +392,21 @@ inline void checkError() {
 
 boolean wasForced;
 boolean wasForcedOff;
-byte wasForcedMode;
-byte wasForcedSavedForce;
+State::Mode wasForcedMode;
+Force::Mode wasForcedSavedForce;
 
 inline void checkForceDuration() {
   if (wasActive) {
     if (wasForcedOff)
       return; // force was canceled by some event (like mode change) during this active cycle 
     // keed forced on util it is active for specifed duration 
-    boolean force = activeMinutes < getSavedDuration();
+    boolean force = activeMinutes < config.duration;
     // also track changes in operation mode & saved mode and cancel force if any of them changes
     if (force) {
       if (!wasForced) {
         wasForcedMode = getMode();
-        wasForcedSavedForce = getSavedForce();
-      } else if (wasForcedMode != getMode() || wasForcedSavedForce != getSavedForce()) {
+        wasForcedSavedForce = config.force;
+      } else if (wasForcedMode != getMode() || wasForcedSavedForce != config.force) {
         // something has changed -- cancel force
         force = false;
         wasForcedOff = true;
@@ -420,8 +422,8 @@ inline void checkForceDuration() {
 }
 
 inline void checkForceAuto() {
-  uint8_t period = getSavedPeriod();
-  uint8_t duration = getSavedDuration();
+  byte period = config.period;
+  byte duration = config.duration;
   if (period == 0 || duration == 0)
     return; // force-auto is not configured
   // when inactive for period -- force on
@@ -431,11 +433,11 @@ inline void checkForceAuto() {
 }
 
 inline void checkForce() {
-  switch (getSavedForce()) {
-  case FORCE_ON:
+  switch (config.force) {
+  case Force::ON:
     setForceOn(true);
     break;
-  case FORCE_AUTO:
+  case Force::AUTO:
     checkForceAuto();
     // !!! falls through to force active for min duration !!!
   default:

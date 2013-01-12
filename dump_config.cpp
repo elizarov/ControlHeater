@@ -1,19 +1,19 @@
 #include <Arduino.h>
 
+#include "Config.h"
+
 #include "dump_config.h"
-#include "persist.h"
 
 void makeConfigDump() {
   Serial.print("[C M");
-  Serial.print(getSavedMode(), DEC);
+  Serial.print(config.mode, DEC);
   Serial.print(" H");
-  Serial.print(getSavedHotwater(), DEC);
+  Serial.print(config.hotwater, DEC);
   Serial.print(" F");
-  Serial.print(getSavedForce(), DEC);
+  Serial.print(config.force, DEC);
   Serial.print(" P");
-  Serial.print(getSavedPeriod(), DEC);
+  Serial.print(config.period, DEC);
   Serial.print(" D");
-  Serial.print(getSavedDuration(), DEC);
+  Serial.print(config.duration, DEC);
   Serial.println("]*");
 }
-

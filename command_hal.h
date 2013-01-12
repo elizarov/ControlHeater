@@ -3,7 +3,9 @@
 
 #include <Arduino.h>
 
-void changeMode(byte mode);
+#include "state_hal.h"
+
+void changeMode(State::Mode mode);
 void setupCommand();
 
 #endif
