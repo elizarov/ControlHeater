@@ -8,7 +8,7 @@ void Force::checkDuration() {
     if (_wasForcedOff)
       return; // force was canceled by some event (like mode change) during this active cycle 
     // keed forced on util it is active for specifed duration 
-    boolean force = millis() - _lastActiveChangeTime < config.duration;
+    boolean force = millis() - _lastActiveChangeTime < config.duration * MINUTES;
     // also track changes in operation mode & saved mode and cancel force if any of them changes
     if (force) {
       if (!_wasForced) {
@@ -35,7 +35,7 @@ void Force::checkAuto() {
   if (period == 0 || duration == 0)
     return; // force-auto is not configured
   // when inactive for period -- force on
-  if (!_wasActive && millis() - _lastActiveChangeTime >= period) 
+  if (!_wasActive && millis() - _lastActiveChangeTime >= period * MINUTES) 
       setForceOn(true);
   // checkForceDuration method will turn it off when duration passes    
 }

@@ -111,7 +111,7 @@ byte getErrorBits() {
 }
 
 byte getActiveSignalBits() {
-  return forcedOn || isTurnedOnCached(); 
+  return (forcedOn || isTurnedOnCached()) ? 1 : 0; 
 }
 
 // use debouncing to provide a more stable measurement base

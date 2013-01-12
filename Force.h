@@ -21,6 +21,8 @@ public:
   void check();
   
 private:
+  static const long MINUTES = 60000L;
+  
   boolean     _wasActive;
   long        _lastActiveChangeTime;
   boolean     _wasForced;
