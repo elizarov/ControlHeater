@@ -1,28 +1,23 @@
-#include "state_hal.h"
-#include "debounce.h"
-
 #include <Metro.h>
+#include "state_hal.h"
 
-#define STATE_INTERRUPT 0
+const int STATE_INTERRUPT = 0;
 
-#define SCAN_STATES  6
+const int SCAN_STATES = 6;
 
-#define TURN_ON_PIN        A3
-#define TURN_ON_THRESHOLD  100
-#define UNKNOWN            0xff
+const int TURN_ON_PIN       = A3;
+const int TURN_ON_THRESHOLD = 100;
+const int UNKNOWN           = 0xff;
 
-#define ERROR_TIMEOUT   2000L // 2 sec
+const int ERROR_TIMEOUT = 2000L; // 2 sec
 
 volatile byte scanState; // current STATE_XXX bits from scanState
-volatile byte curMode;  // current MODE_XXX
+volatile Mode curMode;  // current MODE_XXX
 volatile long modeTime[MAX_MODE + 1]; // last time mode was active
 volatile int readCounter; // number of times interrupt pin was triggered
 volatile byte errorCnt; // # of times error seen in ERROR_TIMEOUT = 0, 1, or 2+
 volatile long lastErrorTime; // last time error state was seen
 volatile byte turnedOnCache; // cached value of turned on state or UNKNOWN
-
-Debounce<byte> stableErrorBits;
-Debounce<byte> stableActiveBits;
 
 boolean forcedOn; // last setForceOn value
 
@@ -37,10 +32,10 @@ void scanStateInterruptHandler() {
   long time = millis();
   if (scanState != newState) {
     scanState = newState;
-    byte newMode = curMode;
+    Mode newMode = curMode;
     for (int i = 0; i < MAX_MODE; i++)
       if ((newState & MODE_MASK) == (1 << i)) {
-        newMode = i + 1;
+        newMode = (Mode)(i + 1);
         break;
       }
     if (curMode != newMode) {
@@ -48,7 +43,7 @@ void scanStateInterruptHandler() {
       curMode = newMode;
     }
   }
-  if (newState & (1 << STATE_ERROR)) {
+  if (newState & (1 << STATE_ERROR_LED)) {
     if (time - lastErrorTime < ERROR_TIMEOUT)
       errorCnt = 2;
     else
@@ -79,7 +74,7 @@ void checkState() {
     if (readCounter == 0 && curMode != 0) { 
       modeTime[0] = time;
       scanState = 0;
-      curMode = 0;
+      curMode = MODE_UNKNOWN;
       errorCnt = 0; // do not report error condition for getErrorBits
       lastErrorTime = time - 2 * ERROR_TIMEOUT; // but do not report error when turned on
       turnedOnCache = UNKNOWN;
@@ -110,33 +105,36 @@ boolean isTurnedOnCached() {
 
 //------- ACCESSORS -------
 
-byte getState() {
-  byte state = scanState; // atomic read
-  // We rebuild error state here based on internal logic
-  state &= ~(1 << STATE_ERROR);
-  state |= getErrorBits() << STATE_ERROR;
-  // add turned on state
-  if (forcedOn || isTurnedOnCached())
-    state |= 1 << STATE_TURNED_ON;
-  return state;
-}
-
-byte getMode() {
-  return curMode;  
-}
-
-long getModeTime(byte mode) {
-  return modeTime[mode];  
-}
-
 // internal check -- report error when blinked error light twice in ERROR_TIMEOUT and use debouncing
 byte getErrorBits() {
-  return stableErrorBits.update(errorCnt > 1 ? 1 : 0);
+  return errorCnt > 1 ? 1 : 0;
+}
+
+byte getActiveSignalBits() {
+  return forcedOn || isTurnedOnCached(); 
 }
 
 // use debouncing to provide a more stable measurement base
 byte getActiveBits() {
-  return stableActiveBits.update((getState() >> STATE_ACTIVE) & 3);
+  return ((scanState >> STATE_ACTIVE_LED) & 1) | (getActiveSignalBits() << 1);
+}
+
+byte getState() {
+  byte state = scanState; // atomic read
+  // We rebuild error state here based on internal logic
+  state &= ~(1 << STATE_ERROR_LED);
+  state |= getErrorBits() << STATE_ERROR_LED;
+  // add turned on state (not part of scan state)
+  state |= getActiveSignalBits() << STATE_ACTIVE_SIGNAL;
+  return state;
+}
+
+Mode getMode() {
+  return curMode;  
+}
+
+long getModeTime(Mode mode) {
+  return modeTime[mode];  
 }
 
 //------- FORCED_TURN_ON -------
