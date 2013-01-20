@@ -1,13 +1,10 @@
 #include "command_hal.h"
 #include "state_hal.h"
+#include "Timeout.h"
 
-#include <Metro.h>
-
-#define COMMAND_PIN_COUNT 4
-
-byte commandPins[COMMAND_PIN_COUNT] = { 10, 9, 11, 12 };
-
-Metro changeTimeout(300);
+const byte COMMAND_PIN_COUNT = 4;
+const byte commandPins[COMMAND_PIN_COUNT] = { 10, 9, 11, 12 };
+const long CHANGE_INTERVAL = 300;
 
 void changeMode(State::Mode mode) {
   byte pin = commandPins[mode - 1];
@@ -15,12 +12,12 @@ void changeMode(State::Mode mode) {
   for (byte att = 0; att < 3 && getMode() != mode; att++) {
     digitalWrite(pin, 1); // push button
     // wait until mode changes to desired or timeout
-    changeTimeout.reset();
+    Timeout changeTimeout(CHANGE_INTERVAL);
     while (getMode() != mode && !changeTimeout.check())
       ; // just spin
     digitalWrite(pin, 0); // release button
     // spin again with released button 
-    changeTimeout.reset();
+    changeTimeout.reset(CHANGE_INTERVAL);
     while (getMode() != mode && !changeTimeout.check())
       ; // just spin
   }
