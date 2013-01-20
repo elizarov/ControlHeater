@@ -1,5 +1,5 @@
 #include <OneWire.h>
-#include <Metro.h>
+#include "Timeout.h"
 #include "Force.h"
 #include "Config.h"
 #include "xprint.h"
@@ -79,9 +79,9 @@ void checkInactive() {
 //------- STATE HISTORY -------
 
 // Keep an hour of history, record every 15 second 
-#define MAX_HISTORY 240 
-
-#define MAX_WORK_MINUTES 60
+const int MAX_HISTORY = 240; 
+const int MAX_WORK_MINUTES = 60;
+const long HISTORY_INTERVAL = 15 * Timeout::SECOND;
 
 struct HistoryItem {
   byte            work;
@@ -95,12 +95,15 @@ byte            hSize = 0;
 int             hSumWork = 0;
 int             hWorkMinutes = 0;
 DS18B20::temp_t hDeltaTemp = 0;
-Metro           hPeriod(15000, true); // 15 sec
+Timeout         hTimeout(HISTORY_INTERVAL);
 
 inline void saveHistory() {
   // note: only save history with valid temperature measurements
   DS18B20::temp_t temp = ds.value();
-  if (temp.valid() && hPeriod.check()) {
+  if (!temp.valid())
+    return;
+  if (hTimeout.check()) {
+    hTimeout.reset(HISTORY_INTERVAL);
     byte work = getActiveBits() != 0 ? 1 : 0;
     hSumWork += work;
     hSize++;
@@ -126,10 +129,10 @@ inline void saveHistory() {
 
 //------- DUMP STATE -------
 
-#define HIGHLIGHT_CHAR '*'
+const char HIGHLIGHT_CHAR = '*';
 
 boolean firstDump = true; 
-Metro dump(INITIAL_DUMP_INTERVAL);
+Timeout dumpTimeout(INITIAL_DUMP_INTERVAL);
 char dumpLine[] = "[C:0 s0000000+??.? d+0.00 p00.0 q0.0 w00 i000-0.0 a000+0.0 u00000000]* ";
 
 byte indexOf(byte start, char c) {
@@ -161,9 +164,7 @@ POSITIONS('a', '+', activePos, activeSize)
 POSITIONS0(activePos + activeSize, ' ', activeDtPos, activeDtSize)
 POSITIONS('u', ']', uptimePos, uptimeSize)
 
-#define DAY_LENGTH_MS (24 * 60 * 60000L)
-
-long daystart = 0;
+unsigned long daystart = 0;
 int updays = 0;
 
 inline void prepareDecimal(int x, int pos, byte size, byte fmt = 0) {
@@ -185,17 +186,17 @@ inline void prepareTemp2(DS18B20::temp_t x, int pos, int size) {
   x.format(&dumpLine[pos], size, DS18B20::temp_t::SIGN);
 }
 
-#define DUMP_REGULAR               0
-#define DUMP_FIRST                 HIGHLIGHT_CHAR
-#define DUMP_EXTERNAL_MODE_CHANGE  'b'
-#define DUMP_RESTORE_OFF_MODE      'r'
-#define DUMP_HOTWATER_TIMEOUT      'h'
-#define DUMP_CMD_RESPONSE          '?'
-#define DUMP_CMD_MODE_CHANGE       'c'
-#define DUMP_POWER_LOST            '0'
-#define DUMP_POWER_BACK            '1'
-#define DUMP_ERROR                 'e'
-#define DUMP_NORMAL                'n'
+const char DUMP_REGULAR              = 0;
+const char DUMP_FIRST                = HIGHLIGHT_CHAR;
+const char DUMP_EXTERNAL_MODE_CHANGE = 'b';
+const char DUMP_RESTORE_OFF_MODE     = 'r';
+const char DUMP_HOTWATER_TIMEOUT     = 'h';
+const char DUMP_CMD_RESPONSE         = '?';
+const char DUMP_CMD_MODE_CHANGE      = 'c';
+const char DUMP_POWER_LOST           = '0';
+const char DUMP_POWER_BACK           = '1';
+const char DUMP_ERROR                = 'e';
+const char DUMP_NORMAL               = 'n';
 
 void makeDump(char dumpType) {
   // atomically read everything
@@ -227,9 +228,9 @@ void makeDump(char dumpType) {
   prepareDecimal(getPresetTime(), presetTimePos, presetTimeSize, 1);
 
   // prepare uptime
-  long time = millis();
-  while ((time - daystart) > DAY_LENGTH_MS) {
-    daystart += DAY_LENGTH_MS;
+  unsigned long time = millis();
+  while (time - daystart > Timeout::DAY) {
+    daystart += Timeout::DAY;
     updays++;
   }
   prepareDecimal(updays, uptimePos, uptimeSize - 6);
@@ -252,23 +253,22 @@ void makeDump(char dumpType) {
     dumpLine[i++] = 0; // and the very last char must be zero
   }
   waitPrintln(dumpLine);
-  dump.interval(PERIODIC_DUMP_INTERVAL + random(-PERIODIC_DUMP_SKEW, PERIODIC_DUMP_SKEW));
-  dump.reset();
+  dumpTimeout.reset(PERIODIC_DUMP_INTERVAL + random(-PERIODIC_DUMP_SKEW, PERIODIC_DUMP_SKEW));
   firstDump = false;
 }
 
 inline void dumpState() {
-  if (dump.check())
+  if (dumpTimeout.check())
     makeDump(firstDump ? DUMP_FIRST : DUMP_REGULAR);
 }
 
 //------- WRITE VALUES -------
 
-#define WRITE_BUF_SIZE     60
-#define WRITE_BUF_START    3
-#define WRITE_BUF_MAX_ITEM 6
+const int WRITE_BUF_SIZE     = 60;
+const int WRITE_BUF_START    = 3;
+const int WRITE_BUF_MAX_ITEM = 6;
 
-Metro writeInterval(INITIAL_WRITE_INTERVAL);
+Timeout writeTimeout(INITIAL_WRITE_INTERVAL);
 char writeBuf[WRITE_BUF_SIZE] = "!C=";
 byte writeBufPos = WRITE_BUF_START;
 
@@ -302,11 +302,10 @@ inline void writeToBuffer() {
 }
 
 inline void writeValues() {
-  if (writeInterval.check()) {
+  if (writeTimeout.check()) {
     writeToBuffer();
     flushWriteBuffer();
-    writeInterval.interval(PERIODIC_WRITE_INTERVAL + random(-PERIODIC_WRITE_SKEW, PERIODIC_WRITE_SKEW));
-    writeInterval.reset();
+    writeTimeout.reset(PERIODIC_WRITE_INTERVAL + random(-PERIODIC_WRITE_SKEW, PERIODIC_WRITE_SKEW));
   }
 }
 

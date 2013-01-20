@@ -13,6 +13,8 @@ class Timeout {
   public:
     static const long SECOND = 1000L;
     static const long MINUTE = 60 * SECOND;
+    static const long HOUR = 60 * MINUTE;
+    static const long DAY = 24 * HOUR;
     
     Timeout();
     Timeout(long interval);
