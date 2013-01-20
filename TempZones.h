@@ -3,14 +3,16 @@
 
 #include <Arduino.h>
 #include "FixNum.h"
+#include "TimedValue.h"
 
 class TempZones {
 public:
-  static const int N_ZONES = 10;
+  static const int  N_ZONES = 10;
+  static const long TIMEOUT = 10 * Timeout::MINUTE;
   
   typedef FixNum<int, 2> temp_t;
   
-  temp_t temp[N_ZONES];
+  TimedValue<temp_t, TIMEOUT> temp[N_ZONES];
 
   TempZones();
 };
