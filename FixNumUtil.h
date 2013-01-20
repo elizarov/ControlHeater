@@ -102,9 +102,17 @@ namespace FixNumUtil {
       }
       return x;
     } else {
+      if (x >= Limits<T>::maxValue || x <= Limits<T>::minValue)
+        return x;
       // prec2 < prec1
-      for (byte i = prec2; i < prec1; i++)
+      for (byte i = prec2; i < prec1; i++) {
+        T mod = x % 10;
         x = x / 10;
+        if (mod >= 5)
+          x++;
+        else if (mod <= -5)
+          x--;  
+      }
       return x;  
     }  
   }
