@@ -1,6 +1,3 @@
-#include <stdlib.h>
-#include <limits.h>
-
 #include "ds18b20.h"
 
 // Conversion period, 750 ms per spec
