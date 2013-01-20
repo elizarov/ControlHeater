@@ -1,14 +1,13 @@
 #include <Arduino.h>
-
 #include "blink_led.h"
 
-#define  BLINK_LED_PIN 13
+const int BLINK_LED_PIN = LED_BUILTIN;
 
-long blinkSwitchTime;
+unsigned long blinkSwitchTime;
 boolean blinkLedState = false;
 
-void blinkLed(int time) {
-  long now = millis();
+void blinkLed(unsigned int time) {
+  unsigned long now = millis();
   if (now - blinkSwitchTime > time) {  
     blinkLedState = !blinkLedState;
     blinkSwitchTime = now;

@@ -28,8 +28,8 @@ const int RESET_ACTIVE_MINUTES_THRESHOLD = 50;   // reset when working for 50 mi
 const int RESET_TEMP_DROP_THRESHOLD      = -10;  // ... and loosing 0.1 deg C/hour or more
 const int RESET_TEMP_ABS_THRESHOLD       = 2100; // ... and temparature is below +21 deg C
 
-const int BLINK_TIME_FORCED  =  250; // blink two times per second
-const int BLINK_TIME_NORMAL  = 1000; // normal flip one every second
+const unsigned int BLINK_TIME_FORCED  =  250; // blink two times per second
+const unsigned int BLINK_TIME_NORMAL  = 1000; // normal flip one every second
 
 //------- READ TEMPERATURE------
 
