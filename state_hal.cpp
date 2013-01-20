@@ -1,8 +1,9 @@
-#include <Metro.h>
 #include "state_hal.h"
+#include "Timeout.h"
+
+const long CHECK_STATE_INTERVAL = 100; // every 100 ms
 
 const int STATE_INTERRUPT = 0;
-
 const int SCAN_STATES = 6;
 
 const int TURN_ON_PIN       = A3;
@@ -64,12 +65,12 @@ void setupState() {
 
 //------- CHECK READ COUNTER -------
 
-Metro checkStatePeriod(100, true); // 100 ms
-
 void checkState() {
+  static Timeout checkStateTimeout(CHECK_STATE_INTERVAL);
   long time = millis();
   // atomically check & reset mode if not ticking
-  if (checkStatePeriod.check()) {
+  if (checkStateTimeout.check()) {
+    checkStateTimeout.reset(CHECK_STATE_INTERVAL);
     noInterrupts();
     if (readCounter == 0 && curMode != 0) { 
       modeTime[0] = time;
