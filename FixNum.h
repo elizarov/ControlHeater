@@ -36,6 +36,11 @@ public:
   template<typename T2, byte prec2> boolean operator >=(FixNum<T2, prec2> other);
 };
 
+// overload print method for FixNums
+template<typename T, byte prec> inline void print(FixNum<T, prec> val) {
+  val.printTo(Serial);
+}
+
 template<typename T> class FixNumParser {
   private:
     enum State {

@@ -10,7 +10,7 @@ boolean printConfigTemp(char code, Config::temp_t temp, boolean first) {
   if (first)
     print(' ');  
   print(code);
-  temp.printTo(Serial);
+  print(temp);
   return false;
 }
 
@@ -54,7 +54,7 @@ void makeZonesDump() {
       print(' ');
       print(i, DEC);
       print(':');
-      temp.printTo(Serial);
+      print(temp);
     }
   }
   print_P(PSTR("]*\r\n"));
