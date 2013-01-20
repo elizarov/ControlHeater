@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <OneWire.h>
-#include <Metro.h>
+#include "Timeout.h"
 #include "FixNum.h"
 
 class DS18B20 {
@@ -18,7 +18,7 @@ class DS18B20 {
     static const int NO_VAL = INT_MAX;
     
     OneWire _wire;
-    Metro _period;
+    Timeout _timeout;
     byte _head;
     byte _tail;
     byte _size;

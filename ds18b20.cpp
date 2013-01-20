@@ -4,15 +4,13 @@
 #include "ds18b20.h"
 
 // Conversion period, 750 ms per spec
-const int DS18B20_PERIOD = 750;
+const int DS18B20_INTERVAL = 750;
 
 // Scratch Pad Size with CRC
 const int DS18B20_SPS = 9;
 
 DS18B20::DS18B20(byte pin) :
-  _wire(pin),
-  _period(DS18B20_PERIOD, true),
-  _value(temp_t::invalid())
+  _wire(pin)
 {
   for (byte i = 0; i < DS18B20_SIZE; i++)
     _queue[i] = NO_VAL;
@@ -20,11 +18,11 @@ DS18B20::DS18B20(byte pin) :
 
 void DS18B20::setup() {
   startConversion();
-  delay(DS18B20_PERIOD);
+  delay(DS18B20_INTERVAL);
 }
 
 void DS18B20::read() {
-  if (_period.check()) {
+  if (_timeout.check()) {
     enqueue(readScratchPad());
     startConversion();
   }
@@ -70,6 +68,7 @@ int DS18B20::readScratchPad() {
 }
 
 void DS18B20::startConversion() {
+  _timeout.reset(DS18B20_INTERVAL);
   if (!_wire.reset())
     return;
   _wire.skip();
