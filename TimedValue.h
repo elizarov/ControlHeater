@@ -27,6 +27,7 @@ template<typename T, long interval> TimedValue<T, interval>& TimedValue<T, inter
     _timeout.disable();
   }
   _value = value;
+  return *this;
 }
 
 template<typename T, long interval> TimedValue<T, interval>::operator T() {
