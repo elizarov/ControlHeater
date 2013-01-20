@@ -4,8 +4,6 @@
 #include <Arduino.h>
 #include <avr/pgmspace.h>
 
-class PrintableMarker {};
-
 void setupPrint();
 
 void waitPrint();
