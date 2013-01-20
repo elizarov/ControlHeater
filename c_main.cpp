@@ -391,8 +391,6 @@ inline void checkError() {
   }
 }
 
-//------- CHECK FORCED MODE -------
-
 //------- CHECK FOR RESET -------
 
 inline boolean hasResetCondition() {
@@ -450,6 +448,7 @@ void setup() {
 
 void loop() {
   ds.read();
+  tempZones.temp[0] = ds.value();
   checkInactive();
   checkState();
   updateMode();
@@ -462,3 +461,4 @@ void loop() {
   writeValues();
   blinkLed(isForceOn() ? BLINK_TIME_FORCED : BLINK_TIME_NORMAL);
 }
+

@@ -7,11 +7,10 @@ const byte PARSE_ANY    = 0;
 const byte PARSE_ATTN   = 1;      // Attention char '!' received, wait for 'C'
 const byte PARSE_CMD    = 2;      // '!C' was read, wait for command char
 const byte PARSE_TVAL   = 3;      // '!CT'<arg><type> was read, wait for temp value
-const byte PARSE_X_ARG0 = 4;      // '[' was read, wait for zone id (in parseArg)
-const byte PARSE_X_ARG  = 5;      // .. continues
-const byte PARSE_X_VAL0 = 6;      // '['<arg>':' was read, wait for temp value (skip spaces)
-const byte PARSE_X_VAL  = 7;      // .. continues to read value
-const byte PARSE_X_FIN  = 8;      // wait for final ']'
+const byte PARSE_X_ARG  = 4;      // '[' was read, wait for zone id (in parseArg)
+const byte PARSE_X_VAL0 = 5;      // '['<arg>':' was read, wait for temp value (skip spaces)
+const byte PARSE_X_VAL  = 6;      // .. continues to read value
+const byte PARSE_X_FIN  = 7;      // wait for final ']'
 
 const byte PARSE_HOTWATER = 'H';    // '!CH' was read, wait for arg
 const byte PARSE_FORCE    = 'F';    // '!CF' was read, wait for arg
@@ -55,7 +54,7 @@ inline char parseChar(char ch) {
           parseState = PARSE_ATTN;
           break;
         case '[':
-          parseState = PARSE_X_ARG0;
+          parseState = PARSE_X_ARG;
           parseArg = 0;
           break;     
       }
@@ -105,21 +104,14 @@ inline char parseChar(char ch) {
     case PARSE_FORCE:
     case PARSE_PERIOD:
     case PARSE_DURATION:
-    case PARSE_X_ARG0:
     case PARSE_X_ARG:
       if (ch >= '0' && ch <= '9') {
         parseArg *= 10;
         parseArg += ch - '0';
-        if (parseState == PARSE_X_ARG0)
-          parseState = PARSE_X_ARG;
-        break;
-      }
-      if (parseState == PARSE_X_ARG0) {
-        parseState == PARSE_ANY;
         break;
       }
       if (parseState == PARSE_X_ARG) {
-        if (ch == ':' && parseArg < TempZones::N_ZONES) {
+        if (ch == ':' && parseArg > 0 && parseArg < TempZones::N_ZONES) {
           parseState = PARSE_X_VAL0;
           parseTempVal.reset();
           break;
