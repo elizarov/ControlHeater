@@ -21,14 +21,14 @@ public:
   void check();
   
 private:
-  static const long MINUTES = 60000L;
+  static const unsigned long MINUTES = 60000L;
   
-  boolean     _wasActive;
-  long        _lastActiveChangeTime;
-  boolean     _wasForced;
-  boolean     _wasForcedOff;
-  State::Mode _wasForcedMode;
-  Force::Mode _wasForcedSavedForce;
+  boolean       _wasActive;
+  unsigned long _lastActiveChangeTime;
+  boolean       _wasForced;
+  boolean       _wasForcedOff;
+  State::Mode   _wasForcedMode;
+  Force::Mode   _wasForcedSavedForce;
   
   void checkDuration();
   void checkAuto();

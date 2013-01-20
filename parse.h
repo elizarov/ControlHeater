@@ -1,8 +1,9 @@
 #ifndef PARSE_H_
 #define PARSE_H_
 
-#define CMD_DUMP_STATE  '?'
-#define CMD_DUMP_CONFIG 'C'
+const char CMD_DUMP_STATE  = '?';
+const char CMD_DUMP_CONFIG = 'C';
+const char CMD_DUMP_ZONES  = 'Z';
 
 /**
  * This function returns '?', 'C' or digits from '1' to '4' if it parsed

@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include <avr/eeprom.h>
 
+#include "FixNum.h"
+#include "TempZones.h"
 #include "Force.h"
 #include "state_hal.h"
 
@@ -17,6 +19,16 @@ public:
     byte _placeholder;
   };
   
+  typedef FixNum<byte, 1> temp_t;
+  
+  class Zone {
+  public:
+    Byte<temp_t> tempA;
+    Byte<temp_t> tempB;
+    Byte<temp_t> tempP;
+    Byte<temp_t> _reserved3;
+  };
+  
   Byte<byte>        _reserved0;
   Byte<State::Mode> mode;       // see state_hal.h enum State::Mode 
   Byte<Force::Mode> force;      // see force.h     enum Force::Mode
@@ -27,6 +39,7 @@ public:
   Byte<byte>        _reserved7;
   Byte<byte>        _reserved8;
   Byte<byte>        _reserved9;
+  Zone              zone[TempZones::N_ZONES];
 };
 
 template<class T> inline Config::Byte<T>::operator T () {

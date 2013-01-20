@@ -1,37 +1,35 @@
 #include <OneWire.h>
 #include <Metro.h>
-
 #include "Force.h"
 #include "Config.h"
-
 #include "xprint.h"
 #include "ds18b20.h"
 #include "state_hal.h"
 #include "command_hal.h"
 #include "preset_hal.h"
 #include "parse.h"
-#include "dump_config.h"
+#include "dump.h"
 #include "fmt_util.h"
 #include "blink_led.h"
 
 //------- ALL TIME DEFS ------
 
-#define INITIAL_DUMP_INTERVAL 2000L  // 2 sec
-#define PERIODIC_DUMP_INTERVAL 30000L // 30 sec
-#define PERIODIC_DUMP_SKEW 5000L      // 5 sec 
+const long INITIAL_DUMP_INTERVAL   = 2000L;  // 2 sec
+const long PERIODIC_DUMP_INTERVAL  = 30000L; // 30 sec
+const long PERIODIC_DUMP_SKEW      = 5000L;  // 5 sec 
 
-#define INITIAL_WRITE_INTERVAL   3000L // 3 sec
-#define PERIODIC_WRITE_INTERVAL 60000L // 1 min
-#define PERIODIC_WRITE_SKEW      5000L // 5 sec
+const long INITIAL_WRITE_INTERVAL  = 3000L;  // 3 sec
+const long PERIODIC_WRITE_INTERVAL = 60000L; // 1 min
+const long PERIODIC_WRITE_SKEW     = 5000L;  // 5 sec
 
-#define RESET_CONDITION_WAIT_INTERVAL 180000L // 3 min
+const long RESET_CONDITION_WAIT_INTERVAL = 180000L; // 3 min
 
-#define RESET_ACTIVE_MINUTES_THRESHOLD 50 // reset when working for 50 mins
-#define RESET_TEMP_DROP_THRESHOLD     -10 // ... and loosing 0.1 deg C/hour or more
-#define RESET_TEMP_ABS_THRESHOLD     2100 // ... and temparature is below +21 deg C
+const int RESET_ACTIVE_MINUTES_THRESHOLD = 50;   // reset when working for 50 mins
+const int RESET_TEMP_DROP_THRESHOLD      = -10;  // ... and loosing 0.1 deg C/hour or more
+const int RESET_TEMP_ABS_THRESHOLD       = 2100; // ... and temparature is below +21 deg C
 
-#define BLINK_TIME_FORCED    250 // blink two times per second
-#define BLINK_TIME_NORMAL   1000 // normal flip one every second
+const int BLINK_TIME_FORCED  =  250; // blink two times per second
+const int BLINK_TIME_NORMAL  = 1000; // normal flip one every second
 
 //------- READ TEMPERATURE------
 
@@ -39,24 +37,24 @@ DS18B20 ds(A2); // use pin A2
 
 //------- CHECK ACTIVE/INACTIVE TIME/TEMP -------
 
-long inactiveStartMillis;
-int inactiveStartTemp;
-int inactiveMinutes;
-int inactiveDt;
+unsigned long   inactiveStartMillis;
+DS18B20::temp_t inactiveStartTemp;
+DS18B20::temp_t inactiveDt;
+int             inactiveMinutes;
 
-long activeStartMillis;
-int activeStartTemp;
-int activeMinutes;
-int activeDt;
+unsigned long   activeStartMillis;
+DS18B20::temp_t activeStartTemp;
+DS18B20::temp_t activeDt;
+int             activeMinutes;
 
-boolean wasInactive;
-boolean wasActive;
+boolean         wasInactive;
+boolean         wasActive;
 
 void checkInactive() {
-  long time = millis();
+  unsigned long time = millis();
   boolean active = getActiveBits() != 0;
-  int temp = ds.value();
-  if (temp == DS18B20_NONE)
+  DS18B20::temp_t temp = ds.value();
+  if (!temp.valid())
     return;
   if (!wasInactive && !active) {
     inactiveStartMillis = time;
@@ -86,30 +84,29 @@ void checkInactive() {
 #define MAX_WORK_MINUTES 60
 
 struct HistoryItem {
-  byte work;
-  int temp;
+  byte            work;
+  DS18B20::temp_t temp;
 };
 
-HistoryItem h[MAX_HISTORY];
-
-byte hHead = 0;
-byte hTail = 0;
-byte hSize = 0;
-int hSumWork = 0;
-int hWorkMinutes = 0;
-int hDeltaTemp = 0;
-Metro hPeriod(15000, true); // 15 sec
+HistoryItem     h[MAX_HISTORY];
+byte            hHead = 0;
+byte            hTail = 0;
+byte            hSize = 0;
+int             hSumWork = 0;
+int             hWorkMinutes = 0;
+DS18B20::temp_t hDeltaTemp = 0;
+Metro           hPeriod(15000, true); // 15 sec
 
 inline void saveHistory() {
   // note: only save history with valid temperature measurements
-  int temp = ds.value();
-  if (temp != DS18B20_NONE && hPeriod.check()) {
+  DS18B20::temp_t temp = ds.value();
+  if (temp.valid() && hPeriod.check()) {
     byte work = getActiveBits() != 0 ? 1 : 0;
     hSumWork += work;
     hSize++;
     // enqueue to tail
     h[hTail].work = work;
-    h[hTail].temp = ds.value();
+    h[hTail].temp = temp;
     // recompute stats
     hWorkMinutes = hSumWork * MAX_WORK_MINUTES / hSize;
     hDeltaTemp = temp - h[hHead].temp;
@@ -173,16 +170,19 @@ inline void prepareDecimal(int x, int pos, byte size, byte fmt = 0) {
   formatDecimal(x, &dumpLine[pos], size, fmt);
 }
 
-int roundTemp1(int x) {
-  return (x + (x > 0 ? 5 : -5)) / 10;
+typedef FixNum<int, 1> temp1_t;
+
+inline temp1_t roundTemp1(DS18B20::temp_t x) {
+  return x;
 }
 
-inline void prepareTemp1(int x, int pos, int size) {
-  prepareDecimal(roundTemp1(x), pos, size, 1 | FMT_SIGN);
+inline void prepareTemp1(DS18B20::temp_t x, int pos, int size) {
+  temp1_t x1 = x;
+  x1.format(&dumpLine[pos], size, temp1_t::SIGN);
 }
 
-inline void prepareTemp2(int x, int pos, int size) {
-  prepareDecimal(x, pos, size, 2 | FMT_SIGN);
+inline void prepareTemp2(DS18B20::temp_t x, int pos, int size) {
+  x.format(&dumpLine[pos], size, DS18B20::temp_t::SIGN);
 }
 
 #define DUMP_REGULAR               0
@@ -210,8 +210,8 @@ void makeDump(char dumpType) {
     dumpLine[statePos + i] = '0' + bitRead(state, i);
 
   // prepare temperature
-  int temp = ds.value();
-  if (temp != DS18B20_NONE)
+  DS18B20::temp_t temp = ds.value();
+  if (temp.valid())
     prepareTemp1(temp, tempPos, tempSize);
 
   // prepare other stuff
@@ -289,8 +289,8 @@ void appendToBuffer(char tag, int value, byte fmt = 0) {
 }
 
 inline void writeToBuffer() {
-  int temp = ds.value();
-  if (temp != DS18B20_NONE)
+  DS18B20::temp_t temp = ds.value();
+  if (temp.valid())
     appendToBuffer('a', roundTemp1(temp), 1 | FMT_SIGN);
   appendToBuffer('b', hDeltaTemp, 2 | FMT_SIGN);
   appendToBuffer('c', hWorkMinutes);
@@ -330,6 +330,9 @@ void executeCommand(char cmd) {
     break;
   case CMD_DUMP_CONFIG:
     makeConfigDump();
+    break;
+  case CMD_DUMP_ZONES:
+    makeZonesDump();
     break;
   case '1':
   case '2':
@@ -395,10 +398,10 @@ inline void checkError() {
 inline boolean hasResetCondition() {
   if (getErrorBits() != 0) 
     return true; // reset when error 
-  int temp = ds.value();
+  DS18B20::temp_t temp = ds.value();
   if (wasActive && activeMinutes >= RESET_ACTIVE_MINUTES_THRESHOLD && 
       hDeltaTemp < RESET_TEMP_DROP_THRESHOLD && 
-      temp != DS18B20_NONE && temp < RESET_TEMP_ABS_THRESHOLD)
+      temp.valid() && temp < RESET_TEMP_ABS_THRESHOLD)
     return true; // reset when supposed to be working for 30 min, but loosing temperature, and temp is low
   return false;  
 }

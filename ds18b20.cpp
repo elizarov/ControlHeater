@@ -4,18 +4,18 @@
 #include "ds18b20.h"
 
 // Conversion period, 750 ms per spec
-#define DS18B20_PERIOD 750
+const int DS18B20_PERIOD = 750;
 
 // Scratch Pad Size with CRC
-#define DS18B20_SPS 9
+const int DS18B20_SPS = 9;
 
 DS18B20::DS18B20(byte pin) :
   _wire(pin),
   _period(DS18B20_PERIOD, true),
-  _value(DS18B20_NONE)
+  _value(temp_t::invalid())
 {
   for (byte i = 0; i < DS18B20_SIZE; i++)
-    _queue[i] = DS18B20_NONE;
+    _queue[i] = NO_VAL;
 }
 
 void DS18B20::setup() {
@@ -30,14 +30,14 @@ void DS18B20::read() {
   }
 }
 
-int DS18B20::value() {
-  if (_value == DS18B20_NONE && _size > 0)
+DS18B20::temp_t DS18B20::value() {
+  if (!_value.valid() && _size > 0)
     computeValue();
   return _value;
 }
 
 void DS18B20::enqueue(int val) {
-  if (val == DS18B20_NONE)
+  if (val != NO_VAL)
     return;
   // dequeue previous value
   if (_size == DS18B20_SIZE) {
@@ -53,19 +53,19 @@ void DS18B20::enqueue(int val) {
   _size++;
 
   // reset computed value
-  _value = DS18B20_NONE;
+  _value = temp_t::invalid();
 }
 
 int DS18B20::readScratchPad() {
   if (!_wire.reset())
-    return DS18B20_NONE;
+    return temp_t::invalid();
   _wire.skip();
   _wire.write(0xBE); // Read Scratchpad
   byte data[DS18B20_SPS];
   for (byte i = 0; i < DS18B20_SPS; i++) // we need it with CRC
     data[i] = _wire.read();
   if (OneWire::crc8(&data[0], DS18B20_SPS - 1) != data[DS18B20_SPS - 1])
-    return DS18B20_NONE; // invalid CRC
+    return temp_t::invalid(); // invalid CRC
   return (data[1] << 8) + data[0]; // take the two bytes from the response relating to temperature
 }
 
@@ -82,7 +82,7 @@ void DS18B20::computeValue() {
   int sum = 0;
   byte count = 0;
   for (byte i = 0; i < DS18B20_SIZE; i++)
-    if (_queue[i] != DS18B20_NONE) {
+    if (_queue[i] != NO_VAL) {
       sum += _queue[i];
       hi = max(hi, _queue[i]);
       lo = min(hi, _queue[i]);
@@ -93,6 +93,6 @@ void DS18B20::computeValue() {
     sum -= lo;
     count -= 2;
   }
-  _value = ((long)sum * 100) / (count << 4);
+  _value = temp_t(((long)sum * 100) / (count << 4));
 }
 
