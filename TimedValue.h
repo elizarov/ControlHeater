@@ -8,7 +8,7 @@
  * that defines "invalid" and "valid" method.
  */
 
-template<typename T, long interval> class TimedValue {
+template<typename T, unsigned long interval> class TimedValue {
   private:
     T       _value;
     Timeout _timeout;
@@ -18,9 +18,9 @@ template<typename T, long interval> class TimedValue {
     operator T();
 };
 
-template<typename T, long interval> TimedValue<T, interval>::TimedValue() {}
+template<typename T, unsigned long interval> TimedValue<T, interval>::TimedValue() {}
 
-template<typename T, long interval> TimedValue<T, interval>& TimedValue<T, interval>::operator = (T value) {
+template<typename T, unsigned long interval> TimedValue<T, interval>& TimedValue<T, interval>::operator = (T value) {
   if (value.valid()) {
     _timeout.reset(interval);
   } else {
@@ -30,7 +30,7 @@ template<typename T, long interval> TimedValue<T, interval>& TimedValue<T, inter
   return *this;
 }
 
-template<typename T, long interval> TimedValue<T, interval>::operator T() {
+template<typename T, unsigned long interval> TimedValue<T, interval>::operator T() {
   if (_timeout.check())
     _value = T::invalid();
   return _value;  
