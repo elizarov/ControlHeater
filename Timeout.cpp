@@ -10,9 +10,7 @@ boolean Timeout::check() {
   return false;
 }
 
-void Timeout::reset(long interval) {
-  if (interval < 0) // just in case
-    interval = 0; 
+void Timeout::reset(unsigned long interval) {
   _time = millis() + interval;  
   if (_time == 0) // just in case
     _time = 1;

@@ -7,7 +7,6 @@
 #define FORCE_H_
 
 #include <Arduino.h>
-
 #include "state_hal.h"
 
 class Force {
@@ -21,8 +20,6 @@ public:
   void check();
   
 private:
-  static const unsigned long MINUTES = 60000L;
-  
   boolean       _wasActive;
   unsigned long _lastActiveChangeTime;
   boolean       _wasForced;

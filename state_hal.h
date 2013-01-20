@@ -47,7 +47,7 @@ byte getState();
 State::Mode getMode();
 
 // Returns time of the last change to the specified mode
-long getModeTime(State::Mode mode);
+unsigned long getModeTime(State::Mode mode);
 
 // force heater on
 void setForceOn(boolean on);

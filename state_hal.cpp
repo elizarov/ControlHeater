@@ -14,7 +14,7 @@ const int ERROR_TIMEOUT = 2000L; // 2 sec
 
 volatile byte scanState; // current STATE_XXX bits from scanState
 volatile State::Mode curMode;  // current MODE_XXX
-volatile long modeTime[MAX_MODE + 1]; // last time mode was active
+volatile unsigned long modeTime[MAX_MODE + 1]; // last time mode was active
 volatile int readCounter; // number of times interrupt pin was triggered
 volatile byte errorCnt; // # of times error seen in ERROR_TIMEOUT = 0, 1, or 2+
 volatile long lastErrorTime; // last time error state was seen
@@ -134,7 +134,7 @@ State::Mode getMode() {
   return curMode;  
 }
 
-long getModeTime(State::Mode mode) {
+unsigned long getModeTime(State::Mode mode) {
   return modeTime[mode];  
 }
 

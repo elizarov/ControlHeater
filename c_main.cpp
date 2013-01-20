@@ -366,10 +366,10 @@ inline void updateMode() {
     prevMode = mode;
   }
   mode = getMode(); // atomic reread
-  uint8_t hotwaterTimeoutMins = config.hotwater;
+  byte hotwaterTimeoutMins = config.hotwater;
   if (hotwaterTimeoutMins != 0 &&
       mode == State::MODE_HOTWATER &&
-      (long)(millis() - getModeTime(State::MODE_HOTWATER)) > (hotwaterTimeoutMins * 60000L))
+      millis() - getModeTime(State::MODE_HOTWATER) > hotwaterTimeoutMins * Timeout::MINUTE)
   {
     // HOTWATER mode for too long... switch to WORKING
     changeMode(State::MODE_WORKING);

@@ -11,22 +11,22 @@ class Timeout {
   private:
     unsigned long _time;
   public:
-    static const long SECOND = 1000L;
-    static const long MINUTE = 60 * SECOND;
-    static const long HOUR = 60 * MINUTE;
-    static const long DAY = 24 * HOUR;
+    static const unsigned long SECOND = 1000UL;
+    static const unsigned long MINUTE = 60 * SECOND;
+    static const unsigned long HOUR = 60 * MINUTE;
+    static const unsigned long DAY = 24 * HOUR;
     
     Timeout();
-    Timeout(long interval);
+    Timeout(unsigned long interval);
     boolean check(); 
     boolean enabled();
     void disable();
-    void reset(long interval);
+    void reset(unsigned long interval);
 };
 
 inline Timeout::Timeout() {}
 
-inline Timeout::Timeout(long interval) { 
+inline Timeout::Timeout(unsigned long interval) { 
   reset(interval);
 }
 
