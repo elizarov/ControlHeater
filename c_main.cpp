@@ -429,7 +429,7 @@ void checkReset() {
     return; // not long enough... wait
   // long enough -> perform reset
   waitPrint();
-  print_P(PSTR("!RR\r\n")); // send reset signal
+  print_C("!RR\r\n"); // send reset signal
   resetConditionWaitInterval *= 2; // next time wait longer
 }
 
@@ -441,7 +441,7 @@ void setup() {
   setupState();
   setupCommand();
   waitPrint();
-  print_P(PSTR("{C:ControlHeater started}*\r\n"));
+  print_C("{C:ControlHeater started}*\r\n");
   makeConfigDump();
 }
 

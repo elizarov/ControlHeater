@@ -16,15 +16,15 @@ boolean printConfigTemp(char code, Config::temp_t temp, boolean first) {
 
 void makeConfigDump() {
   waitPrint();
-  print_P(PSTR("[CC M"));
+  print_C("[CC M");
   print(config.mode, DEC);
-  print_P(PSTR(" H"));
+  print_C(" H");
   print(config.hotwater, DEC);
-  print_P(PSTR(" F"));
+  print_C(" F");
   print(config.force, DEC);
-  print_P(PSTR(" P"));
+  print_C(" P");
   print(config.period, DEC);
-  print_P(PSTR(" D"));
+  print_C(" D");
   print(config.duration, DEC);
   for (byte i = 0; i < TempZones::N_ZONES; i++) {
     Config::Zone& zone = config.zone[i];
@@ -32,7 +32,7 @@ void makeConfigDump() {
     Config::temp_t tb = zone.tempB;
     Config::temp_t tp = zone.tempP;
     if (ta.valid() || tb.valid() || tp.valid()) {
-      print_P(PSTR(" T"));
+      print_C(" T");
       print(i, DEC);
       print('{');
       boolean first = true;
@@ -42,12 +42,12 @@ void makeConfigDump() {
       print('}');
     }
   }
-  print_P(PSTR("]*\r\n"));
+  print_C("]*\r\n");
 }
 
 void makeZonesDump() {
   waitPrint();
-  print_P(PSTR("[CZ"));
+  print_C("[CZ");
   for (byte i = 0; i < TempZones::N_ZONES; i++) {
     TempZones::temp_t temp = tempZones.temp[i];
     if (temp.valid()) {
@@ -57,5 +57,5 @@ void makeZonesDump() {
       print(temp);
     }
   }
-  print_P(PSTR("]*\r\n"));
+  print_C("]*\r\n");
 }

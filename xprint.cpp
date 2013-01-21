@@ -20,16 +20,12 @@ void waitPrintln(const char* s) {
   Serial.println(s);
 }
 
-void print_P(Print& out, PGM_P str) {
+void printOn_P(Print& out, PGM_P str) {
   while (1) {
     char ch = pgm_read_byte_near(str++);
     if (!ch)
       return;
     out.write(ch);
   }
-}
-
-void print_P(PGM_P str) {
-  print_P(Serial, str);
 }
 
