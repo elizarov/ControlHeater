@@ -7,7 +7,7 @@
 boolean printConfigTemp(char code, Config::temp_t temp, boolean first) {
   if (!temp.valid())
     return first;
-  if (first)
+  if (!first)
     print(' ');  
   print(code);
   print(temp);
