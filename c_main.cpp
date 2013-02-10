@@ -39,12 +39,12 @@ DS18B20 ds(A2); // use pin A2
 
 unsigned long   inactiveStartMillis;
 DS18B20::temp_t inactiveStartTemp;
-DS18B20::temp_t inactiveDt;
+DS18B20::temp_t inactiveDt(0);
 int             inactiveMinutes;
 
 unsigned long   activeStartMillis;
 DS18B20::temp_t activeStartTemp;
-DS18B20::temp_t activeDt;
+DS18B20::temp_t activeDt(0);
 int             activeMinutes;
 
 boolean         wasInactive;
