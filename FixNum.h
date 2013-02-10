@@ -22,6 +22,7 @@ public:
   FixNum();
   FixNum(T mantissa);
 
+  T mantissa();
   operator T ();
   boolean valid();
   byte format(char* pos, byte size, Fmt fmt = NONE);   
@@ -77,6 +78,10 @@ template<typename T, byte prec> inline FixNum<T, prec>::FixNum() : _mantissa(Fix
 
 template<typename T, byte prec> inline FixNum<T, prec>::FixNum(T mantissa) : _mantissa(mantissa) {}
 
+template<typename T, byte prec> inline T FixNum<T, prec>::mantissa() { 
+  return _mantissa;
+}
+
 template<typename T, byte prec> inline FixNum<T, prec>::operator T() { 
   return _mantissa;
 }
@@ -103,60 +108,60 @@ template<typename T, byte prec> template<typename T2, byte prec2> inline FixNum<
 template<typename T, byte prec> template<typename T2, byte prec2> boolean FixNum<T, prec>::operator ==(FixNum<T2, prec2> other) {
   if (!valid() || !other.valid())
     return false;
-  typedef typename FixNumUtil::Common<T, T2> T0;
+  typedef typename FixNumUtil::Common<T, T2>::type T0;
   byte p0 = max(prec, prec2);
-  T0 x1 = FixNumUtil::scale<T0>(_mantissa, prec, p0);
-  T0 x2 = FixNumUtil::scale<T0>(other._mantissa, prec2, p0);
+  T0 x1 = FixNumUtil::scale((T0)_mantissa, prec, p0);
+  T0 x2 = FixNumUtil::scale((T0)other.mantissa(), prec2, p0);
   return x1 == x2;  
 }
 
 template<typename T, byte prec> template<typename T2, byte prec2> boolean FixNum<T, prec>::operator !=(FixNum<T2, prec2> other) {
   if (!valid() || !other.valid())
     return false;
-  typedef typename FixNumUtil::Common<T, T2> T0;
+  typedef typename FixNumUtil::Common<T, T2>::type T0;
   byte p0 = max(prec, prec2);
-  T0 x1 = FixNumUtil::scale<T0>(_mantissa, prec, p0);
-  T0 x2 = FixNumUtil::scale<T0>(other._mantissa, prec2, p0);
+  T0 x1 = FixNumUtil::scale((T0)_mantissa, prec, p0);
+  T0 x2 = FixNumUtil::scale((T0)other.mantissa(), prec2, p0);
   return x1 != x2;  
 }
   
 template<typename T, byte prec> template<typename T2, byte prec2> boolean FixNum<T, prec>::operator < (FixNum<T2, prec2> other) {
   if (!valid() || !other.valid())
     return false;
-  typedef typename FixNumUtil::Common<T, T2> T0;
+  typedef typename FixNumUtil::Common<T, T2>::type T0;
   byte p0 = max(prec, prec2);
-  T0 x1 = FixNumUtil::scale<T0>(_mantissa, prec, p0);
-  T0 x2 = FixNumUtil::scale<T0>(other._mantissa, prec2, p0);
+  T0 x1 = FixNumUtil::scale((T0)_mantissa, prec, p0);
+  T0 x2 = FixNumUtil::scale((T0)other.mantissa(), prec2, p0);
   return x1 < x2;  
 }
   
 template<typename T, byte prec> template<typename T2, byte prec2> boolean FixNum<T, prec>::operator <=(FixNum<T2, prec2> other) {
   if (!valid() || !other.valid())
     return false;
-  typedef typename FixNumUtil::Common<T, T2> T0;
+  typedef typename FixNumUtil::Common<T, T2>::type T0;
   byte p0 = max(prec, prec2);
-  T0 x1 = FixNumUtil::scale<T0>(_mantissa, prec, p0);
-  T0 x2 = FixNumUtil::scale<T0>(other._mantissa, prec2, p0);
+  T0 x1 = FixNumUtil::scale((T0)_mantissa, prec, p0);
+  T0 x2 = FixNumUtil::scale((T0)other.mantissa(), prec2, p0);
   return x1 <= x2;  
 }
   
 template<typename T, byte prec> template<typename T2, byte prec2> boolean FixNum<T, prec>::operator > (FixNum<T2, prec2> other) {
   if (!valid() || !other.valid())
     return false;
-  typedef typename FixNumUtil::Common<T, T2> T0;
+  typedef typename FixNumUtil::Common<T, T2>::type T0;
   byte p0 = max(prec, prec2);
-  T0 x1 = FixNumUtil::scale<T0>(_mantissa, prec, p0);
-  T0 x2 = FixNumUtil::scale<T0>(other._mantissa, prec2, p0);
+  T0 x1 = FixNumUtil::scale((T0)_mantissa, prec, p0);
+  T0 x2 = FixNumUtil::scale((T0)other.mantissa(), prec2, p0);
   return x1 > x2;  
 }
   
 template<typename T, byte prec> template<typename T2, byte prec2> boolean FixNum<T, prec>::operator >=(FixNum<T2, prec2> other) {
   if (!valid() || !other.valid())
     return false;
-  typedef typename FixNumUtil::Common<T, T2> T0;
+  typedef typename FixNumUtil::Common<T, T2>::type T0;
   byte p0 = max(prec, prec2);
-  T0 x1 = FixNumUtil::scale<T0>(_mantissa, prec, p0);
-  T0 x2 = FixNumUtil::scale<T0>(other._mantissa, prec2, p0);
+  T0 x1 = FixNumUtil::scale((T0)_mantissa, prec, p0);
+  T0 x2 = FixNumUtil::scale((T0)other.mantissa(), prec2, p0);
   return x1 >= x2;  
 }
 

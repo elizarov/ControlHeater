@@ -26,9 +26,11 @@ private:
   boolean       _wasForcedOff;
   State::Mode   _wasForcedMode;
   Force::Mode   _wasForcedSavedForce;
-  
+
+  boolean isTempBelowForceThreshold();
+  boolean isTempBelowPeriodicThreshold();  
+  boolean checkAuto();
   void checkDuration();
-  void checkAuto();
 };
 
 extern Force force;

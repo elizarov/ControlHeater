@@ -1,8 +1,57 @@
 #include "Force.h"
 #include "Config.h"
 #include "Timeout.h"
+#include "TempZones.h"
+#include "state_hal.h"
 
 Force force;
+
+boolean Force::isTempBelowForceThreshold() {
+  State::Mode mode = getMode();
+  boolean activeMode;
+  switch (mode) {
+  case State::MODE_WORKING:
+  case State::MODE_TIMER:
+    activeMode = true;
+    break;
+  case State::MODE_OFF:
+    activeMode = false;
+    break;
+  default:
+    return false; // unsupported mode  
+  }
+  for (byte i = 0; i < TempZones::N_ZONES; i++) {
+    Config::temp_t configTemp = activeMode ? config.zone[i].tempA.read() : config.zone[i].tempB.read();
+    if (tempZones.temp[i].get() < configTemp) 
+      return true;
+  }
+  return false;
+}
+
+boolean Force::isTempBelowPeriodicThreshold() {
+  for (byte i = 0; i < TempZones::N_ZONES; i++)
+    if (tempZones.temp[i].get() < config.zone[i].tempP.read()) 
+      return true;
+  return false;
+}
+
+boolean Force::checkAuto() {
+  if (_wasActive)
+    return false; // already was active -- nothing to do
+  if (isTempBelowForceThreshold())
+    return true; // force on because temp is too low
+  // check for periodic foring
+  byte period = config.period.read();
+  byte duration = config.duration.read();
+  if (period == 0 || duration == 0)
+    return false; // periodic forcing is not configured
+  if (!isTempBelowPeriodicThreshold())
+    return false; // don't do periodic forcing as temp is not low enough
+  // when inactive for period -- force on
+  if (millis() - _lastActiveChangeTime >= period * Timeout::MINUTE) 
+      return true; // checkDuration method will turn it off when duration passes    
+  return false;    
+}
 
 void Force::checkDuration() {
   if (_wasActive) {
@@ -30,17 +79,6 @@ void Force::checkDuration() {
   }
 }
 
-void Force::checkAuto() {
-  byte period = config.period.read();
-  byte duration = config.duration.read();
-  if (period == 0 || duration == 0)
-    return; // force-auto is not configured
-  // when inactive for period -- force on
-  if (!_wasActive && millis() - _lastActiveChangeTime >= period * Timeout::MINUTE) 
-      setForceOn(true);
-  // checkForceDuration method will turn it off when duration passes    
-}
-
 void Force::check() {
   boolean isActive = getActiveBits() != 0;
   if (isActive != _wasActive) {
@@ -53,8 +91,11 @@ void Force::check() {
     setForceOn(true);
     break;
   case Force::AUTO:
-    checkAuto();
-    // !!! falls through to force active for min duration !!!
+    if (checkAuto()) {
+      setForceOn(true);
+      return;
+    }
+    // !!! otherwise falls through to force active for min duration !!!
   default:
     checkDuration();
   }

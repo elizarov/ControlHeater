@@ -49,7 +49,7 @@ void makeZonesDump() {
   waitPrint();
   print_C("[CZ");
   for (byte i = 0; i < TempZones::N_ZONES; i++) {
-    TempZones::temp_t temp = tempZones.temp[i];
+    TempZones::temp_t temp = tempZones.temp[i].get();
     if (temp.valid()) {
       print(' ');
       print(i, DEC);

@@ -12,10 +12,11 @@ template<typename T, unsigned long interval> class TimedValue {
   private:
     T       _value;
     Timeout _timeout;
+    TimedValue(const TimedValue<T, interval>& other); // no copy constructor
   public:
     TimedValue();
     TimedValue& operator = (T value);
-    operator T();
+    T get();
 };
 
 template<typename T, unsigned long interval> TimedValue<T, interval>::TimedValue() {}
@@ -30,7 +31,7 @@ template<typename T, unsigned long interval> TimedValue<T, interval>& TimedValue
   return *this;
 }
 
-template<typename T, unsigned long interval> TimedValue<T, interval>::operator T() {
+template<typename T, unsigned long interval> T TimedValue<T, interval>::get() {
   if (_timeout.check())
     _value = T::invalid();
   return _value;  
