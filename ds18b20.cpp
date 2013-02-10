@@ -32,7 +32,7 @@ DS18B20::temp_t DS18B20::value() {
 }
 
 void DS18B20::enqueue(int val) {
-  if (val != NO_VAL)
+  if (val == NO_VAL)
     return;
   // dequeue previous value
   if (_size == DS18B20_SIZE) {
@@ -53,7 +53,7 @@ void DS18B20::enqueue(int val) {
 
 int DS18B20::readScratchPad() {
   if (!_wire.reset())
-    return temp_t::invalid();
+    return NO_VAL;
   _wire.skip();
   _wire.write(0xBE); // Read Scratchpad
   byte data[DS18B20_SPS];
