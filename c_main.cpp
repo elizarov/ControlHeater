@@ -315,7 +315,7 @@ State::Mode prevMode;
 
 void saveMode() {
   State::Mode mode = getMode(); // atomic read
-  if (mode != 0 && mode != config.mode)
+  if (mode != 0 && mode != config.mode.read())
     config.mode = mode;
   prevMode = mode; // also store as "previous mode" to track updates
 }
@@ -348,7 +348,7 @@ void executeCommand(char cmd) {
 
 inline void updateMode() {
   State::Mode mode = getMode(); // read current mode atomically
-  State::Mode savedMode = config.mode;
+  State::Mode savedMode = config.mode.read();
   if (mode != 0 && mode != savedMode) {
     // forbit direct transition from OFF to WORKING
     if (savedMode == State::MODE_OFF && mode == State::MODE_WORKING) {
@@ -366,7 +366,7 @@ inline void updateMode() {
     prevMode = mode;
   }
   mode = getMode(); // atomic reread
-  byte hotwaterTimeoutMins = config.hotwater;
+  byte hotwaterTimeoutMins = config.hotwater.read();
   if (hotwaterTimeoutMins != 0 &&
       mode == State::MODE_HOTWATER &&
       millis() - getModeTime(State::MODE_HOTWATER) > hotwaterTimeoutMins * Timeout::MINUTE)

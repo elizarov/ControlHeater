@@ -17,20 +17,20 @@ boolean printConfigTemp(char code, Config::temp_t temp, boolean first) {
 void makeConfigDump() {
   waitPrint();
   print_C("[CC M");
-  print(config.mode, DEC);
+  print(config.mode.read(), DEC);
   print_C(" H");
-  print(config.hotwater, DEC);
+  print(config.hotwater.read(), DEC);
   print_C(" F");
-  print(config.force, DEC);
+  print(config.force.read(), DEC);
   print_C(" P");
-  print(config.period, DEC);
+  print(config.period.read(), DEC);
   print_C(" D");
-  print(config.duration, DEC);
+  print(config.duration.read(), DEC);
   for (byte i = 0; i < TempZones::N_ZONES; i++) {
     Config::Zone& zone = config.zone[i];
-    Config::temp_t ta = zone.tempA;
-    Config::temp_t tb = zone.tempB;
-    Config::temp_t tp = zone.tempP;
+    Config::temp_t ta = zone.tempA.read();
+    Config::temp_t tb = zone.tempB.read();
+    Config::temp_t tp = zone.tempP.read();
     if (ta.valid() || tb.valid() || tp.valid()) {
       print_C(" T");
       print(i, DEC);

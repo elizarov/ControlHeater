@@ -29,3 +29,7 @@ void printOn_P(Print& out, PGM_P str) {
   }
 }
 
+void print_P(PGM_P str) { 
+  printOn_P(Serial, str); 
+}
+

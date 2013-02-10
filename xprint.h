@@ -10,8 +10,7 @@ void waitPrint();
 void waitPrintln(const char* s);
 
 void printOn_P(Print& out, PGM_P str);
-
-inline void print_P(PGM_P str) { printOn_P(Serial, str); }
+void print_P(PGM_P str);
 
 // Workaround for http://gcc.gnu.org/bugzilla/show_bug.cgi?id=34734 
 #ifdef PROGMEM 
@@ -22,14 +21,13 @@ inline void print_P(PGM_P str) { printOn_P(Serial, str); }
 #define printOn_C(out, str) { static const char _s[] PROGMEM = str; printOn_P(out, &_s[0]); }
 #define print_C(str)        { static const char _s[] PROGMEM = str; print_P(&_s[0]); }
 
-template<typename T> inline void print(T val) {
+template<typename T> inline void print(const T& val) {
   Serial.print(val);
 }
 
-template<typename T> inline void print(T val, int base) {
+template<typename T> inline void print(const T& val, int base) {
   Serial.print(val, base);
 } 
-
 
 #endif
 

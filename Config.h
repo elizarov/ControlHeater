@@ -13,9 +13,11 @@ class Config {
 public:
   template<class T> class Byte {
   public:
-    operator T ();
+    Byte();
+    T read();
     Byte<T>& operator = (T value);
   private:
+    Byte(const Byte<T>& other); // disable copy constructor
     byte _placeholder;
   };
   
@@ -42,11 +44,13 @@ public:
   Zone              zone[TempZones::N_ZONES];
 };
 
-template<class T> inline Config::Byte<T>::operator T () {
+template<class T> Config::Byte<T>::Byte() {} // default constructor is empty
+
+template<class T> T Config::Byte<T>::read() {
   return (T)eeprom_read_byte((uint8_t*)this);
 }
 
-template<class T> inline Config::Byte<T>& Config::Byte<T>::operator = (T value) {
+template<class T> Config::Byte<T>& Config::Byte<T>::operator = (T value) {
   eeprom_write_byte((uint8_t*)this, (byte)value);
   return *this;
 }

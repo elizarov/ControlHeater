@@ -9,13 +9,13 @@ void Force::checkDuration() {
     if (_wasForcedOff)
       return; // force was canceled by some event (like mode change) during this active cycle 
     // keed forced on util it is active for specifed duration 
-    boolean force = millis() - _lastActiveChangeTime < config.duration * Timeout::MINUTE;
+    boolean force = millis() - _lastActiveChangeTime < config.duration.read() * Timeout::MINUTE;
     // also track changes in operation mode & saved mode and cancel force if any of them changes
     if (force) {
       if (!_wasForced) {
         _wasForcedMode = getMode();
-        _wasForcedSavedForce = config.force;
-      } else if (_wasForcedMode != getMode() || _wasForcedSavedForce != config.force) {
+        _wasForcedSavedForce = config.force.read();
+      } else if (_wasForcedMode != getMode() || _wasForcedSavedForce != config.force.read()) {
         // something has changed -- cancel force
         force = false;
         _wasForcedOff = true;
@@ -31,8 +31,8 @@ void Force::checkDuration() {
 }
 
 void Force::checkAuto() {
-  byte period = config.period;
-  byte duration = config.duration;
+  byte period = config.period.read();
+  byte duration = config.duration.read();
   if (period == 0 || duration == 0)
     return; // force-auto is not configured
   // when inactive for period -- force on
@@ -48,7 +48,7 @@ void Force::check() {
     _wasActive = isActive;
   }
   
-  switch (config.force) {
+  switch (config.force.read()) {
   case Force::ON:
     setForceOn(true);
     break;
