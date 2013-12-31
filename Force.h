@@ -30,7 +30,7 @@ private:
   boolean isTempBelowForceThreshold();
   boolean isTempBelowPeriodicThreshold();  
   boolean checkAuto();
-  void checkDuration();
+  boolean checkDuration();
 };
 
 extern Force force;

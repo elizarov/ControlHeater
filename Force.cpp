@@ -40,7 +40,7 @@ boolean Force::checkAuto() {
     return false; // already was active -- nothing to do
   if (isTempBelowForceThreshold())
     return true; // force on because temp is too low
-  // check for periodic foring
+  // check for periodic forcing
   byte period = config.period.read();
   byte duration = config.duration.read();
   if (period == 0 || duration == 0)
@@ -53,25 +53,25 @@ boolean Force::checkAuto() {
   return false;    
 }
 
-void Force::checkDuration() {
+boolean Force::checkDuration() {
   if (_wasActive) {
     if (_wasForcedOff)
-      return; // force was canceled by some event (like mode change) during this active cycle 
+      return false; // force was already canceled by some event (like mode change) during this active cycle 
     // keed forced on util it is active for specifed duration 
-    boolean force = millis() - _lastActiveChangeTime < config.duration.read() * Timeout::MINUTE;
+    boolean keepForced = millis() - _lastActiveChangeTime < config.duration.read() * Timeout::MINUTE;
     // also track changes in operation mode & saved mode and cancel force if any of them changes
-    if (force) {
+    if (keepForced) {
       if (!_wasForced) {
         _wasForcedMode = getMode();
         _wasForcedSavedForce = config.force.read();
       } else if (_wasForcedMode != getMode() || _wasForcedSavedForce != config.force.read()) {
         // something has changed -- cancel force
-        force = false;
+        keepForced = false;
         _wasForcedOff = true;
       }
     }
-    setForceOn(force);
-    _wasForced = force;
+    _wasForced = keepForced;
+    return !keepForced;
   } else {
     // cleanup state when inactive
     _wasForced = false;
@@ -91,13 +91,14 @@ void Force::check() {
     setForceOn(true);
     break;
   case Force::AUTO:
-    if (checkAuto()) {
-      setForceOn(true);
-      return;
-    }
-    // !!! otherwise falls through to force active for min duration !!!
+    if (checkAuto())
+      setForceOn(true); // turn on when needed
+    else if (checkDuration())
+      setForceOn(false); // will turn force off after timeout or mode change
+    break;
   default:
-    checkDuration();
+    // no force -- turn it off;
+    setForceOn(false);
   }
 }
 

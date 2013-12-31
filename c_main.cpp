@@ -14,6 +14,8 @@
 
 //------- ALL TIME DEFS ------
 
+const long STARTUP_DELAY           = 3000L;  // 3 sec
+
 const long INITIAL_DUMP_INTERVAL   = 2000L;  // 2 sec
 const long PERIODIC_DUMP_INTERVAL  = 30000L; // 30 sec
 const long PERIODIC_DUMP_SKEW      = 5000L;  // 5 sec 
@@ -440,6 +442,7 @@ void setup() {
   ds.setup();
   setupState();
   setupCommand();
+  delay(STARTUP_DELAY);
   waitPrint();
   print_C("{C:ControlHeater started}*\r\n");
   makeConfigDump();
