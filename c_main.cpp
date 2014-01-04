@@ -20,10 +20,6 @@ const long INITIAL_DUMP_INTERVAL   = 2000L;  // 2 sec
 const long PERIODIC_DUMP_INTERVAL  = 30000L; // 30 sec
 const long PERIODIC_DUMP_SKEW      = 5000L;  // 5 sec 
 
-const long INITIAL_WRITE_INTERVAL  = 3000L;  // 3 sec
-const long PERIODIC_WRITE_INTERVAL = 60000L; // 1 min
-const long PERIODIC_WRITE_SKEW     = 5000L;  // 5 sec
-
 const long RESET_CONDITION_WAIT_INTERVAL = 180000L; // 3 min
 
 const int RESET_ACTIVE_MINUTES_THRESHOLD = 50;   // reset when working for 50 mins
@@ -135,7 +131,7 @@ const char HIGHLIGHT_CHAR = '*';
 
 boolean firstDump = true; 
 Timeout dumpTimeout(INITIAL_DUMP_INTERVAL);
-char dumpLine[] = "[C:0 s0000000+??.? d+0.00 p00.0 q0.0 w00 i000-0.0 a000+0.0 u00000000]* ";
+char dumpLine[] = "[C:0 s0000000+??.? d+0.00 p00.0 q0.0 w00 i000-0.0 a000+0.0 e0o0 u00000000]* ";
 
 byte indexOf(byte start, char c) {
   for (byte i = start; dumpLine[i] != 0; i++)
@@ -164,6 +160,8 @@ POSITIONS('i', '-', inactivePos, inactiveSize)
 POSITIONS0(inactivePos + inactiveSize, ' ', inactiveDtPos, inactiveDtSize)
 POSITIONS('a', '+', activePos, activeSize)
 POSITIONS0(activePos + activeSize, ' ', activeDtPos, activeDtSize)
+POSITIONS('e', 'o', errorPos, errorSize)
+POSITIONS('o', ' ', operationPos, operationSize) 
 POSITIONS('u', ']', uptimePos, uptimeSize)
 
 unsigned long daystart = 0;
@@ -224,6 +222,8 @@ void makeDump(char dumpType) {
   prepareTemp1(inactiveDt, inactiveDtPos, inactiveDtSize);
   prepareDecimal(activeMinutes, activePos, activeSize);
   prepareTemp1(activeDt, activeDtPos, activeDtSize);
+  prepareDecimal(getErrorBits(), errorPos, errorSize);
+  prepareDecimal(getActiveBits(), operationPos, operationSize);
 
   // prepare presets
   prepareDecimal(getPresetTemp(), presetTempPos, presetTempSize, 1);
@@ -262,53 +262,6 @@ void makeDump(char dumpType) {
 inline void dumpState() {
   if (dumpTimeout.check())
     makeDump(firstDump ? DUMP_FIRST : DUMP_REGULAR);
-}
-
-//------- WRITE VALUES -------
-
-const int WRITE_BUF_SIZE     = 60;
-const int WRITE_BUF_START    = 3;
-const int WRITE_BUF_MAX_ITEM = 6;
-
-Timeout writeTimeout(INITIAL_WRITE_INTERVAL);
-char writeBuf[WRITE_BUF_SIZE] = "!C=";
-byte writeBufPos = WRITE_BUF_START;
-
-void flushWriteBuffer() {
-  if (writeBufPos == WRITE_BUF_START)
-    return;
-  writeBuf[writeBufPos] = 0;
-  waitPrintln(&writeBuf[0]);
-  writeBufPos = WRITE_BUF_START;
-}
-
-void appendToBuffer(char tag, int value, byte fmt = 0) {
-  if (writeBufPos + 1 + WRITE_BUF_MAX_ITEM >= WRITE_BUF_SIZE)
-    flushWriteBuffer();
-  writeBuf[writeBufPos++] = tag;
-  byte size = formatDecimal(value, &writeBuf[writeBufPos], WRITE_BUF_MAX_ITEM, fmt | FMT_LEFT | FMT_SPACE);
-  writeBufPos += size;
-}
-
-inline void writeToBuffer() {
-  DS18B20::temp_t temp = ds.value();
-  if (temp.valid())
-    appendToBuffer('a', roundTemp1(temp), 1 | FMT_SIGN);
-  appendToBuffer('b', hDeltaTemp, 2 | FMT_SIGN);
-  appendToBuffer('c', hWorkMinutes);
-  appendToBuffer('d', getMode());
-  appendToBuffer('e', getErrorBits());
-  appendToBuffer('f', getActiveBits());
-  appendToBuffer('g', getPresetTemp(), 1);
-  appendToBuffer('h', getPresetTime(), 1);
-}
-
-inline void writeValues() {
-  if (writeTimeout.check()) {
-    writeToBuffer();
-    flushWriteBuffer();
-    writeTimeout.reset(PERIODIC_WRITE_INTERVAL + random(-PERIODIC_WRITE_SKEW, PERIODIC_WRITE_SKEW));
-  }
 }
 
 //------- SAVE MODE --------
@@ -460,7 +413,6 @@ void loop() {
   checkReset();
   force.check();
   dumpState();
-  writeValues();
   blinkLed(isForceOn() ? BLINK_TIME_FORCED : BLINK_TIME_NORMAL);
 }
 
