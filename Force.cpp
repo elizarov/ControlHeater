@@ -6,7 +6,7 @@
 
 Force force;
 
-boolean Force::isTempBelowForceThreshold() {
+byte Force::getForcedZoneImpl() {
   State::Mode mode = getMode();
   boolean activeMode;
   switch (mode) {
@@ -23,9 +23,18 @@ boolean Force::isTempBelowForceThreshold() {
   for (byte i = 0; i < TempZones::N_ZONES; i++) {
     Config::temp_t configTemp = activeMode ? config.zone[i].tempA.read() : config.zone[i].tempB.read();
     if (tempZones.temp[i].get() < configTemp) 
-      return true;
+      return i;
   }
-  return false;
+  return TempZones::N_ZONES;
+}
+
+boolean Force::isTempBelowForceThreshold() {
+  return getForcedZoneImpl() < TempZones::N_ZONES;
+}
+
+byte Force::getForcedZone() {
+  byte z = getForcedZoneImpl();
+  return z < TempZones::N_ZONES ? z : 0;
 }
 
 boolean Force::isTempBelowPeriodicThreshold() {
@@ -101,4 +110,5 @@ void Force::check() {
     setForceOn(false);
   }
 }
+
 

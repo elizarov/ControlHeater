@@ -18,6 +18,7 @@ public:
   };
   
   void check();
+  byte getForcedZone();
   
 private:
   boolean       _wasActive;
@@ -27,6 +28,7 @@ private:
   State::Mode   _wasForcedMode;
   Force::Mode   _wasForcedSavedForce;
 
+  byte getForcedZoneImpl();
   boolean isTempBelowForceThreshold();
   boolean isTempBelowPeriodicThreshold();  
   boolean checkAuto();

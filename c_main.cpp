@@ -17,7 +17,7 @@
 const long STARTUP_DELAY           = 3000L;  // 3 sec
 
 const long INITIAL_DUMP_INTERVAL   = 2000L;  // 2 sec
-const long PERIODIC_DUMP_INTERVAL  = 30000L; // 30 sec
+const long PERIODIC_DUMP_INTERVAL  = 60000L; // 1 min
 const long PERIODIC_DUMP_SKEW      = 5000L;  // 5 sec 
 
 const long RESET_CONDITION_WAIT_INTERVAL = 180000L; // 3 min
@@ -131,7 +131,7 @@ const char HIGHLIGHT_CHAR = '*';
 
 boolean firstDump = true; 
 Timeout dumpTimeout(INITIAL_DUMP_INTERVAL);
-char dumpLine[] = "[C:0 s0000000+??.? d+0.00 p00.0 q0.0 w00 i000-0.0 a000+0.0 e0o0 u00000000]* ";
+char dumpLine[] = "[C:0 +??.? e0o0z0;s0000000 d+0.00p00.0q0.0w00i000-0.0a000+0.0u00000000]* ";
 
 byte indexOf(byte start, char c) {
   for (byte i = start; dumpLine[i] != 0; i++)
@@ -152,16 +152,19 @@ byte statePos = indexOf(0, 's') + 1;
 byte highlightPos = indexOf(0, HIGHLIGHT_CHAR);
 
 POSITIONS0(indexOf(0, '+'), ' ', tempPos, tempSize)
-POSITIONS('d', ' ', deltaPos, deltaSize)
-POSITIONS('p', ' ', presetTempPos, presetTempSize)
-POSITIONS('q', ' ', presetTimePos, presetTimeSize)
-POSITIONS('w', ' ', workPos, workSize)
-POSITIONS('i', '-', inactivePos, inactiveSize)
-POSITIONS0(inactivePos + inactiveSize, ' ', inactiveDtPos, inactiveDtSize)
-POSITIONS('a', '+', activePos, activeSize)
-POSITIONS0(activePos + activeSize, ' ', activeDtPos, activeDtSize)
+
 POSITIONS('e', 'o', errorPos, errorSize)
-POSITIONS('o', ' ', operationPos, operationSize) 
+POSITIONS('o', 'z', operationPos, operationSize) 
+POSITIONS('z', ';', zonePos, zoneSize) 
+
+POSITIONS('d', 'p', deltaPos, deltaSize)
+POSITIONS('p', 'q', presetTempPos, presetTempSize)
+POSITIONS('q', 'w', presetTimePos, presetTimeSize)
+POSITIONS('w', 'i', workPos, workSize)
+POSITIONS('i', '-', inactivePos, inactiveSize)
+POSITIONS0(inactivePos + inactiveSize, 'a', inactiveDtPos, inactiveDtSize)
+POSITIONS('a', '+', activePos, activeSize)
+POSITIONS0(activePos + activeSize, 'u', activeDtPos, activeDtSize)
 POSITIONS('u', ']', uptimePos, uptimeSize)
 
 unsigned long daystart = 0;
@@ -215,6 +218,11 @@ void makeDump(char dumpType) {
   if (temp.valid())
     prepareTemp1(temp, tempPos, tempSize);
 
+  // prepeare state info
+  prepareDecimal(getErrorBits(), errorPos, errorSize);
+  prepareDecimal(getActiveBits(), operationPos, operationSize);
+  prepareDecimal(force.getForcedZone(), zonePos, zoneSize);
+
   // prepare other stuff
   prepareTemp2(hDeltaTemp, deltaPos, deltaSize);
   prepareDecimal(hWorkMinutes, workPos, workSize);
@@ -222,9 +230,7 @@ void makeDump(char dumpType) {
   prepareTemp1(inactiveDt, inactiveDtPos, inactiveDtSize);
   prepareDecimal(activeMinutes, activePos, activeSize);
   prepareTemp1(activeDt, activeDtPos, activeDtSize);
-  prepareDecimal(getErrorBits(), errorPos, errorSize);
-  prepareDecimal(getActiveBits(), operationPos, operationSize);
-
+  
   // prepare presets
   prepareDecimal(getPresetTemp(), presetTempPos, presetTempSize, 1);
   prepareDecimal(getPresetTime(), presetTimePos, presetTimeSize, 1);
