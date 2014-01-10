@@ -44,22 +44,22 @@ boolean Force::isTempBelowPeriodicThreshold() {
   return false;
 }
 
-boolean Force::checkAuto() {
+Force::AutoReason Force::checkAuto() {
   if (_wasActive)
-    return false; // already was active -- nothing to do
+    return AUTO_NONE; // already was active -- nothing to do
   if (isTempBelowForceThreshold())
-    return true; // force on because temp is too low
+    return AUTO_TEMP_LOW; // force on because temp is too low
   // check for periodic forcing
   byte period = config.period.read();
   byte duration = config.duration.read();
   if (period == 0 || duration == 0)
-    return false; // periodic forcing is not configured
+    return AUTO_NONE; // periodic forcing is not configured
   if (!isTempBelowPeriodicThreshold())
-    return false; // don't do periodic forcing as temp is not low enough
+    return AUTO_NONE; // don't do periodic forcing as temp is not low enough
   // when inactive for period -- force on
   if (millis() - _lastActiveChangeTime >= period * Timeout::MINUTE) 
-      return true; // checkDuration method will turn it off when duration passes    
-  return false;    
+      return AUTO_PERIODIC; // checkDuration method will turn it off when duration passes    
+  return AUTO_NONE;    
 }
 
 boolean Force::checkDuration() {
@@ -88,26 +88,28 @@ boolean Force::checkDuration() {
   }
 }
 
-void Force::check() {
+boolean Force::check() {
   boolean isActive = getActiveBits() != 0;
   if (isActive != _wasActive) {
     _lastActiveChangeTime = millis();
     _wasActive = isActive;
   }
-  
+  AutoReason ar;
   switch (config.force.read()) {
   case Force::ON:
     setForceOn(true);
-    break;
+    return false;
   case Force::AUTO:
-    if (checkAuto())
+    ar = checkAuto();
+    if (ar != AUTO_NONE)
       setForceOn(true); // turn on when needed
     else if (checkDuration())
       setForceOn(false); // will turn force off after timeout or mode change
-    break;
+    return ar == AUTO_TEMP_LOW;
   default:
     // no force -- turn it off;
     setForceOn(false);
+    return false;
   }
 }
 

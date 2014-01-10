@@ -17,10 +17,18 @@ public:
     AUTO  = 2,
   };
   
-  void check();
+  /** Returns true when focing heater ON because temp is too low */
+  boolean check();
+
   byte getForcedZone();
   
 private:
+  enum AutoReason {
+    AUTO_NONE,
+    AUTO_TEMP_LOW,
+    AUTO_PERIODIC
+  };
+
   boolean       _wasActive;
   unsigned long _lastActiveChangeTime;
   boolean       _wasForced;
@@ -31,7 +39,7 @@ private:
   byte getForcedZoneImpl();
   boolean isTempBelowForceThreshold();
   boolean isTempBelowPeriodicThreshold();  
-  boolean checkAuto();
+  AutoReason checkAuto();
   boolean checkDuration();
 };
 

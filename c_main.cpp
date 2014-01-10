@@ -200,6 +200,7 @@ const char DUMP_POWER_LOST           = '0';
 const char DUMP_POWER_BACK           = '1';
 const char DUMP_ERROR                = 'e';
 const char DUMP_NORMAL               = 'n';
+const char DUMP_FORCED_ON            = 'f';
 
 void makeDump(char dumpType) {
   // atomically read everything
@@ -417,7 +418,8 @@ void loop() {
   executeCommand(parseCommand());
   checkError();
   checkReset();
-  force.check();
+  if (force.check())
+    makeDump(DUMP_FORCED_ON);
   dumpState();
   blinkLed(isForceOn() ? BLINK_TIME_FORCED : BLINK_TIME_NORMAL);
 }
