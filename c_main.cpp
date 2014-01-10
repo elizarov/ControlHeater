@@ -409,7 +409,7 @@ void setup() {
 
 void loop() {
   ds.read();
-  tempZones.temp[0] = ds.value();
+  tempZones.temp[0].setValue(ds.value());
   checkInactive();
   checkState();
   updateMode();

@@ -35,7 +35,7 @@ inline char parseChar(char ch) {
     case PARSE_X_FIN:
       if (ch == ']') {
         // temperature packet '['<arg>':' ... <temp> ... ']' is over
-        tempZones.temp[parseArg] = parseTempVal;        
+        tempZones.temp[parseArg].setReceived(parseTempVal);        
         parseState = PARSE_ANY;
         break;
       }
