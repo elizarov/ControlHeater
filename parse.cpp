@@ -29,7 +29,7 @@ byte parseTempType;
 typedef FixNumParser<int> temp_parser_t;
 temp_parser_t parseTempVal;
 
-inline char parseChar(char ch) {
+char parseChar(char ch) {
   boolean eoln = ch == '\r' || ch == '\n';
   switch (parseState) {
     case PARSE_X_FIN:
@@ -177,6 +177,8 @@ inline char parseChar(char ch) {
           break;
         case temp_parser_t::DONE:
           parseState = PARSE_X_FIN;
+          // recurse to parse this char in PARSE_X_FIN state and update state correspondingly
+          parseChar(ch);
           break;  
         case temp_parser_t::NUM:
           break; // continue parsing number
